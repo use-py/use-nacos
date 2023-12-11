@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "use-nacos"
+version = "0.1.0"
+description = "A simple application"
+authors = ["MicLon <jcnd@163.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/use-py/use-nacos"
+repository = "https://github.com/use-py/use-nacos"
+packages = [
+    { include = "use_nacos", from = "src" }
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/use-py/use-nacos/issues"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+httpx = "^0.25.2"
+
+
+[tool.poetry.group.test.dependencies]
+pylint = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-mock = "*"
+black = "*"
+flake8 = "*"
+isort = "*"
+pre-commit = "*"
+pre-commit-hooks = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
