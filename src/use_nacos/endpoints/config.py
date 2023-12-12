@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import json
 import logging
 import threading
 from typing import Optional, Any, Callable
@@ -14,8 +15,9 @@ from ..typings import SyncAsync
 logger = logging.getLogger(__name__)
 
 
-def _get_md5(content):
-    return hashlib.md5(content.encode('utf-8')).hexdigest() if content else ''
+def _get_md5(content: Any):
+    string_content = str(content) if not isinstance(content, str) else content
+    return hashlib.md5(string_content.encode('utf-8')).hexdigest() if content else ''
 
 
 def _get_config_key(data_id: str, group: str, tenant: str):
@@ -118,42 +120,14 @@ class _BaseConfigEndpoint(Endpoint):
 
 class ConfigOperationMixin:
 
-    def subscribe(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = '',
-            timeout: Optional[int] = 30_000,
-            serialized: Optional[bool] = False,
-            cache: Optional[BaseCache] = None,
-            callback: Optional[Callable] = None
-    ) -> SyncAsync[Any]:
-        cache = cache or MemoryCache()
-        config_key = _get_config_key(data_id, group, tenant)
-        last_md5 = _get_md5(cache.get(config_key) or '')
-        stop_event = threading.Event()
-        stop_event.cancel = stop_event.set
+    @staticmethod
+    def _config_callback(callback, config, serialized):
+        if not callable(callback):
+            return
 
-        def _subscriber():
-            nonlocal last_md5
-            while not stop_event.is_set():
-                try:
-                    response = self.subscriber(data_id, group, last_md5, tenant, timeout)
-                    if not response:
-                        continue
-                    logging.info("Configuration update detected.")
-                    last_config = self.get(data_id, group, tenant, serialized=serialized)
-                    last_md5 = _get_md5(last_config)
-                    cache.set(config_key, last_config)
-                    if callback:
-                        callback(last_config)
-                except Exception as exc:
-                    logging.error(exc)
-                    stop_event.wait(1)
-
-        thread = threading.Thread(target=_subscriber)
-        thread.start()
-        return stop_event
+        if serialized:
+            config = json.loads(config)
+        callback(config)
 
     def get(
             self,
@@ -181,8 +155,56 @@ class ConfigOperationMixin:
                 return default
             raise
 
+    def subscribe(
+            self,
+            data_id: str,
+            group: str,
+            tenant: Optional[str] = '',
+            timeout: Optional[int] = 30_000,
+            serialized: Optional[bool] = False,
+            cache: Optional[BaseCache] = None,
+            callback: Optional[Callable] = None
+    ) -> SyncAsync[Any]:
+        cache = cache or MemoryCache()
+        config_key = _get_config_key(data_id, group, tenant)
+        last_md5 = _get_md5(cache.get(config_key) or '')
+        stop_event = threading.Event()
+        stop_event.cancel = stop_event.set
+
+        def _subscriber():
+            nonlocal last_md5
+            while not stop_event.is_set():
+                try:
+                    response = self.subscriber(data_id, group, last_md5, tenant, timeout)
+                    if not response:
+                        continue
+                    logging.info("Configuration update detected.")
+                    last_config = self.get(data_id, group, tenant, serialized=False)
+                    last_md5 = _get_md5(last_config)
+                    cache.set(config_key, last_config)
+                    self._config_callback(callback, last_config, serialized)
+                except Exception as exc:
+                    logging.error(exc)
+                    stop_event.wait(1)
+
+        thread = threading.Thread(target=_subscriber)
+        thread.start()
+        return stop_event
+
 
 class ConfigAsyncOperationMixin:
+
+    @staticmethod
+    async def _config_callback(callback, config, serialized):
+        if not callable(callback):
+            return
+
+        if serialized:
+            config = json.loads(config)
+        if asyncio.iscoroutinefunction(callback):
+            await callback(config)
+        else:
+            callback(config)
 
     async def get(
             self,
@@ -235,14 +257,10 @@ class ConfigAsyncOperationMixin:
                     if not response:
                         continue
                     logging.info("Configuration update detected.")
-                    last_config = await self.get(data_id, group, tenant, serialized=serialized)
+                    last_config = await self.get(data_id, group, tenant, serialized=False)
                     last_md5 = _get_md5(last_config)
                     cache.set(config_key, last_config)
-                    if callback:
-                        if asyncio.iscoroutinefunction(callback):
-                            await callback(last_config)
-                        else:
-                            callback(last_config)
+                    await self._config_callback(callback, last_config, serialized)
                 except asyncio.CancelledError:
                     break
                 except Exception as exc:

@@ -138,6 +138,14 @@ def test__get_config_key(config, data_id, group, tenant, expected):
     assert conf._get_config_key(data_id, group, tenant) == expected
 
 
+@pytest.mark.parametrize("content, expected", [
+    ("1234", "81dc9bdb52d04dc20036dbd8313ed055"),
+    ({"a": 1}, "5268827fe25d043c696340679639cf67")
+])
+def test__get_md5(content, expected):
+    assert conf._get_md5(content) == expected
+
+
 def test_mock_exception(config, mocker):
     mocker.patch.object(ConfigEndpoint, '_get', side_effect=HTTPResponseError(response=httpx.Response(500)))
     with pytest.raises(HTTPResponseError):
