@@ -124,6 +124,7 @@ class ConfigOperationMixin:
             group: str,
             tenant: Optional[str] = '',
             timeout: Optional[int] = 30_000,
+            serialized: Optional[bool] = False,
             cache: Optional[BaseCache] = None,
             callback: Optional[Callable] = None
     ) -> SyncAsync[Any]:
@@ -141,7 +142,7 @@ class ConfigOperationMixin:
                     if not response:
                         continue
                     logging.info("Configuration update detected.")
-                    last_config = self.get(data_id, group, tenant)
+                    last_config = self.get(data_id, group, tenant, serialized=serialized)
                     last_md5 = _get_md5(last_config)
                     cache.set(config_key, last_config)
                     if callback:
@@ -214,8 +215,9 @@ class ConfigAsyncOperationMixin:
             group: str,
             tenant: Optional[str] = '',
             timeout: Optional[int] = 30_000,
+            serialized: Optional[bool] = False,
             cache: Optional[BaseCache] = None,
-            callback: Optional[Callable] = None
+            callback: Optional[Callable] = None,
     ) -> SyncAsync[Any]:
         cache = cache or MemoryCache()
         config_key = _get_config_key(data_id, group, tenant)
@@ -233,7 +235,7 @@ class ConfigAsyncOperationMixin:
                     if not response:
                         continue
                     logging.info("Configuration update detected.")
-                    last_config = await self.get(data_id, group, tenant)
+                    last_config = await self.get(data_id, group, tenant, serialized=serialized)
                     last_md5 = _get_md5(last_config)
                     cache.set(config_key, last_config)
                     if callback:
