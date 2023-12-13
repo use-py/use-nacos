@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "use-nacos"
-version = "0.1.3"
+version = "0.1.4"
 description = "A simple application"
 authors = ["MicLon <jcnd@163.com>"]
 readme = "README.md"
