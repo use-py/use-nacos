@@ -1,15 +1,15 @@
 import asyncio
 import hashlib
-import json
 import logging
 import threading
-from typing import Optional, Any, Callable
+from typing import Optional, Any, Callable, Union
 
 import httpx
 
 from .endpoint import Endpoint
 from ..cache import BaseCache, MemoryCache, memory_cache
 from ..exception import HTTPResponseError
+from ..serializer import Serializer, AutoSerializer
 from ..typings import SyncAsync
 
 logger = logging.getLogger(__name__)
@@ -29,15 +29,25 @@ def _parse_config_key(key: str):
     return key.split('#')
 
 
+def _serialize_config(
+        config: Any,
+        serializer: Optional[Union["Serializer", bool]] = None
+):
+    """ Serialize config with serializer """
+    if isinstance(serializer, bool) and serializer is True:
+        serializer = AutoSerializer()
+    if isinstance(serializer, Serializer):
+        return serializer(config)
+    return config
+
+
 class _BaseConfigEndpoint(Endpoint):
 
     def _get(
             self,
             data_id: str,
             group: str,
-            tenant: Optional[str] = '',
-            *,
-            serialized: Optional[bool] = False
+            tenant: Optional[str] = ''
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/cs/configs",
@@ -46,7 +56,7 @@ class _BaseConfigEndpoint(Endpoint):
                 "group": group,
                 "tenant": tenant,
             },
-            serialized=serialized
+            serialized=False
         )
 
     def publish(
@@ -121,12 +131,10 @@ class _BaseConfigEndpoint(Endpoint):
 class ConfigOperationMixin:
 
     @staticmethod
-    def _config_callback(callback, config, serialized):
+    def _config_callback(callback, config, serializer):
         if not callable(callback):
             return
-
-        if serialized:
-            config = json.loads(config)
+        config = _serialize_config(config, serializer)
         callback(config)
 
     def get(
@@ -135,20 +143,20 @@ class ConfigOperationMixin:
             group: str,
             tenant: Optional[str] = '',
             *,
-            serialized: Optional[bool] = False,
+            serializer: Optional[Union["Serializer", bool]] = None,
             cache: Optional[BaseCache] = None,
             default: Optional[str] = None
     ) -> SyncAsync[Any]:
         cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
         try:
-            config = self._get(data_id, group, tenant, serialized=serialized)
+            config = self._get(data_id, group, tenant)
             # todo: this function need to be optimized
             cache.set(config_key, config)
-            return config
+            return _serialize_config(config, serializer)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             logger.error("Failed to get config from server, try to get from cache. %s", exc)
-            return cache.get(config_key)
+            return _serialize_config(cache.get(config_key), serializer)
         except HTTPResponseError as exc:
             logger.debug("Failed to get config from server. %s", exc)
             if exc.status == 404 and default is not None:
@@ -161,7 +169,7 @@ class ConfigOperationMixin:
             group: str,
             tenant: Optional[str] = '',
             timeout: Optional[int] = 30_000,
-            serialized: Optional[bool] = False,
+            serializer: Optional[Union["Serializer", bool]] = None,
             cache: Optional[BaseCache] = None,
             callback: Optional[Callable] = None
     ) -> SyncAsync[Any]:
@@ -179,10 +187,10 @@ class ConfigOperationMixin:
                     if not response:
                         continue
                     logging.info("Configuration update detected.")
-                    last_config = self.get(data_id, group, tenant, serialized=False)
+                    last_config = self._get(data_id, group, tenant)
                     last_md5 = _get_md5(last_config)
                     cache.set(config_key, last_config)
-                    self._config_callback(callback, last_config, serialized)
+                    self._config_callback(callback, last_config, serializer)
                 except Exception as exc:
                     logging.error(exc)
                     stop_event.wait(1)
@@ -195,12 +203,11 @@ class ConfigOperationMixin:
 class ConfigAsyncOperationMixin:
 
     @staticmethod
-    async def _config_callback(callback, config, serialized):
+    async def _config_callback(callback, config, serializer):
         if not callable(callback):
             return
 
-        if serialized:
-            config = json.loads(config)
+        config = _serialize_config(config, serializer)
         if asyncio.iscoroutinefunction(callback):
             await callback(config)
         else:
@@ -212,19 +219,19 @@ class ConfigAsyncOperationMixin:
             group: str,
             tenant: Optional[str] = '',
             *,
-            serialized: Optional[bool] = False,
+            serializer: Optional[Union["Serializer", bool]] = None,
             cache: Optional[BaseCache] = None,
             default: Optional[str] = None
     ) -> SyncAsync[Any]:
         cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
         try:
-            config = await self._get(data_id, group, tenant, serialized=serialized)
+            config = await self._get(data_id, group, tenant)
             cache.set(config_key, config)
-            return config
+            return _serialize_config(config, serializer)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             logger.error("Failed to get config from server, try to get from cache. %s", exc)
-            return cache.get(config_key)
+            return _serialize_config(cache.get(config_key), serializer)
         except HTTPResponseError as exc:
             logger.debug("Failed to get config from server. %s", exc)
             if exc.status == 404 and default is not None:
@@ -237,7 +244,7 @@ class ConfigAsyncOperationMixin:
             group: str,
             tenant: Optional[str] = '',
             timeout: Optional[int] = 30_000,
-            serialized: Optional[bool] = False,
+            serializer: Optional[Union["Serializer", bool]] = None,
             cache: Optional[BaseCache] = None,
             callback: Optional[Callable] = None,
     ) -> SyncAsync[Any]:
@@ -257,10 +264,10 @@ class ConfigAsyncOperationMixin:
                     if not response:
                         continue
                     logging.info("Configuration update detected.")
-                    last_config = await self.get(data_id, group, tenant, serialized=False)
+                    last_config = await self._get(data_id, group, tenant)
                     last_md5 = _get_md5(last_config)
                     cache.set(config_key, last_config)
-                    await self._config_callback(callback, last_config, serialized)
+                    await self._config_callback(callback, last_config, serializer)
                 except asyncio.CancelledError:
                     break
                 except Exception as exc:
