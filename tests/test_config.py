@@ -8,8 +8,9 @@ import pytest
 
 from use_nacos.cache import MemoryCache
 from use_nacos.client import NacosClient, NacosAsyncClient
-from use_nacos.endpoints import ConfigEndpoint, config as conf
+from use_nacos.endpoints import ConfigEndpoint, ConfigAsyncEndpoint, config as conf
 from use_nacos.exception import HTTPResponseError
+from use_nacos.serializer import JsonSerializer, AutoSerializer, YamlSerializer, TomlSerializer
 
 server_addr = os.environ.get('SERVER_ADDR')
 
@@ -31,7 +32,7 @@ def config(client):
 
 @pytest.fixture
 def async_config(async_client):
-    yield ConfigEndpoint(async_client)
+    yield ConfigAsyncEndpoint(async_client)
 
 
 def test_config_get_not_found(config):
@@ -48,7 +49,7 @@ def test_config_get_not_found_default_value(config, mocker):
     ('test_config', 'DEFAULT_GROUP'),
 ])
 @pytest.mark.parametrize('content ,tenant, type, serialized, expected', [
-    ('test_config', '', None, False, 'test_config'),
+    ('test_config', '', None, None, 'test_config'),
     (json.dumps({"a": "b"}), '', 'json', True, {"a": "b"}),
     ('<p>hello nacos</p>', '', 'html', False, '<p>hello nacos</p>'),
     (1234, '', None, True, 1234),
@@ -59,7 +60,7 @@ def test_config_publish_get(config, data_id, group, content, tenant, type, seria
         data_id,
         group,
         tenant,
-        serialized=serialized
+        serializer=serialized
     ) == expected
 
 
@@ -101,20 +102,20 @@ async def test_async_config_get_not_found(async_config):
 @pytest.mark.parametrize('data_id, group', [
     ('test_config', 'DEFAULT_GROUP'),
 ])
-@pytest.mark.parametrize('content ,tenant, type, serialized, expected', [
+@pytest.mark.parametrize('content ,tenant, type, serializer, expected', [
     ('test_config', '', None, False, 'test_config'),
-    (json.dumps({"a": "b"}), '', 'json', True, {"a": "b"}),
+    (json.dumps({"a": "b"}), '', 'json', JsonSerializer(), {"a": "b"}),
     ('<p>hello nacos</p>', '', 'html', False, '<p>hello nacos</p>'),
     (1234, '', None, True, 1234),
 ])
 @pytest.mark.asyncio
-async def test_async_config_publish_get(async_config, data_id, group, content, tenant, type, serialized, expected):
+async def test_async_config_publish_get(async_config, data_id, group, content, tenant, type, serializer, expected):
     assert await async_config.publish(data_id, group, content, tenant, type)
     assert await async_config.get(
         data_id,
         group,
         tenant,
-        serialized=serialized
+        serializer=serializer
     ) == expected
 
 
@@ -165,3 +166,13 @@ def test_config_from_cache(config, mocker):
     # mock timeout
     mocker.patch.object(ConfigEndpoint, '_get', side_effect=httpx.TimeoutException(""))
     assert config.get('test_config_cache', 'DEFAULT_GROUP', cache=mc) == "abc"
+
+
+@pytest.mark.parametrize("conf_str, serializer, expected", [
+    ("123", AutoSerializer(), 123),
+    ('{"a": 2}', JsonSerializer(), {"a": 2}),
+    ('a: 1\nfoo:\n  b: 2', YamlSerializer(), {'a': 1, 'foo': {'b': 2}}),
+    ('a = 1\n[foo]\nb = 2', TomlSerializer(), {'a': 1, 'foo': {'b': 2}}),
+])
+def test_config_serializer(conf_str, serializer, expected):
+    assert conf._serialize_config(conf_str, serializer) == expected
