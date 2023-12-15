@@ -111,6 +111,6 @@ class AutoSerializer(Serializer):
         for serializer in self.serializers:
             try:
                 return serializer(data)
-            except:
+            except SerializerException:
                 pass
         raise SerializerException(f"Cannot parse data: {data!r}")
