@@ -24,3 +24,7 @@ class HTTPResponseError(Exception):
         self.status = response.status_code
         self.headers = response.headers
         self.body = response.text
+
+
+class EmptyHealthyInstanceError(Exception):
+    """Exception for empty healthy instance list error."""

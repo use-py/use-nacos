@@ -3,10 +3,14 @@ import json
 import logging
 import threading
 import time
-from typing import Optional, Any, Literal
+from functools import partial
+from typing import Optional, Any, Literal, List, TypedDict
+
+import httpx
 
 from .endpoint import Endpoint
 from .._chooser import Chooser
+from ..exception import EmptyHealthyInstanceError
 from ..typings import SyncAsync, BeatType
 
 _ConsistencyType = Literal["ephemeral", "persist"]
@@ -14,7 +18,48 @@ _ConsistencyType = Literal["ephemeral", "persist"]
 logger = logging.getLogger(__name__)
 
 
+class InstanceType(TypedDict):
+    ip: str
+    port: int
+    weight: float
+    enabled: bool
+    healthy: bool
+    metadata: Optional[dict]
+
+
+def _choose_one_healthy(instances: List[InstanceType]) -> InstanceType:
+    """ Choose one healthy instance """
+    hosts = [
+        (host, host.get('weight'))
+        for host in instances
+    ]
+    if not hosts:
+        raise EmptyHealthyInstanceError("No healthy instance found")
+    chooser = Chooser(hosts)
+    chooser.refresh()
+    return chooser.random_with_weight()
+
+
 class InstanceOperationMixin:
+
+    def __getattr__(self, attr) -> SyncAsync[Any]:
+        return partial(self.request, service_name=attr)
+
+    def request(
+            self,
+            method: str,
+            path: str,
+            instance: Optional[InstanceType] = None,
+            service_name: Optional[str] = None,
+            *args, **kwargs
+    ) -> SyncAsync[Any]:
+        """ Request with instance """
+        if not any([instance, service_name]):
+            raise ValueError("Either `instance` or `service_name` should be provided")
+        if not instance:
+            instance = self.get_one_healthy(service_name)
+        url = f"http://{instance['ip']}:{instance['port']}{path}"  # noqa
+        return httpx.Client().request(method=method, url=url, *args, **kwargs)
 
     def heartbeat(
             self,
@@ -63,7 +108,7 @@ class InstanceOperationMixin:
             group_name: Optional[str] = None,
             clusters: Optional[str] = None,
 
-    ):
+    ) -> InstanceType:
         """ Get a healthy instance """
         instances = self.list(
             service_name=service_name,
@@ -72,16 +117,29 @@ class InstanceOperationMixin:
             clusters=clusters,
             healthy_only=True
         )
-        hosts = [
-            (host, host.get('weight'))
-            for host in instances["hosts"]
-        ]
-        chooser = Chooser(hosts)
-        chooser.refresh()
-        return chooser.random_with_weight()
+        return _choose_one_healthy(instances["hosts"])
 
 
 class InstanceAsyncOperationMixin:
+
+    def __getattr__(self, attr) -> SyncAsync[Any]:
+        return partial(self.request, service_name=attr)
+
+    async def request(
+            self,
+            method: str,
+            path: str,
+            instance: Optional[InstanceType] = None,
+            service_name: Optional[str] = None,
+            *args, **kwargs
+    ) -> SyncAsync[Any]:
+        """ Request with instance """
+        if not any([instance, service_name]):
+            raise ValueError("Either `instance` or `service_name` should be provided")
+        if not instance:
+            instance = await self.get_one_healthy(service_name)
+        url = f"http://{instance['ip']}:{instance['port']}{path}"  # noqa
+        return await httpx.AsyncClient().request(method=method, url=url, *args, **kwargs)
 
     async def heartbeat(
             self,
@@ -130,7 +188,7 @@ class InstanceAsyncOperationMixin:
             group_name: Optional[str] = None,
             clusters: Optional[str] = None,
 
-    ):
+    ) -> InstanceType:
         """ Get a healthy instance """
         instances = await self.list(
             service_name=service_name,
@@ -139,13 +197,7 @@ class InstanceAsyncOperationMixin:
             clusters=clusters,
             healthy_only=True
         )
-        hosts = [
-            (host, host.get('weight'))
-            for host in instances["hosts"]
-        ]
-        chooser = Chooser(hosts)
-        chooser.refresh()
-        return chooser.random_with_weight()
+        return _choose_one_healthy(instances["hosts"])
 
 
 class _BaseInstanceEndpoint(Endpoint):
