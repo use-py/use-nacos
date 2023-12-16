@@ -73,8 +73,9 @@ class BaseClient:
             method, path, params=query, data=body, headers=_headers, **kwargs
         )
 
-    def _parse_response(self, response: Response, serialized: bool) -> Any:
-
+    @staticmethod
+    def _parse_response(response: Response, serialized: bool) -> Any:
+        """ Parse response body """
         if not serialized:
             return response.text
         try:

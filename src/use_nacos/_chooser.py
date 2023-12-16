@@ -49,7 +49,8 @@ class Chooser:
 
         return self.items[index]
 
-    def _find_index(self, weights, value):
+    @staticmethod
+    def _find_index(weights, value):
         # Perform a binary search manually since weights are not just keys
         low = 0
         high = len(weights) - 1
