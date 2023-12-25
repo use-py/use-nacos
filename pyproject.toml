@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "use-nacos"
-version = "0.1.4a4"
-description = "A simple application"
+version = "0.1.5"
+description = "A python nacos client based on the official open-api"
 authors = ["MicLon <jcnd@163.com>"]
 readme = "README.md"
 license = "MIT"
