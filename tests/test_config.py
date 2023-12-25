@@ -1,5 +1,4 @@
 import json
-import os
 import random
 import time
 
@@ -12,17 +11,15 @@ from use_nacos.endpoints import ConfigEndpoint, ConfigAsyncEndpoint, config as c
 from use_nacos.exception import HTTPResponseError
 from use_nacos.serializer import JsonSerializer, AutoSerializer, YamlSerializer, TomlSerializer
 
-server_addr = os.environ.get('SERVER_ADDR')
-
 
 @pytest.fixture
 def client():
-    return NacosClient(server_addr=server_addr, username="nacos", password="nacos")
+    return NacosClient()
 
 
 @pytest.fixture
 def async_client():
-    return NacosAsyncClient(server_addr=server_addr, username="nacos", password="nacos")
+    return NacosAsyncClient()
 
 
 @pytest.fixture

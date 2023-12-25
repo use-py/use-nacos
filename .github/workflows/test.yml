@@ -18,6 +18,7 @@ jobs:
         os: [ "ubuntu-latest" ]
         python-version: [ "3.8" ]
     runs-on: ${{ matrix.os }}
+    environment: test
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -46,4 +47,6 @@ jobs:
           source .venv/bin/activate
           pytest tests/
         env:
-          SERVER_ADDR: ${{ secrets.SERVER_ADDR }}
+          NACOS_SERVER_ADDR: ${{ secrets.NACOS_SERVER_ADDR }}
+          NACOS_USERNAME: ${{ secrets.NACOS_USERNAME }}
+          NACOS_PASSWORD: ${{ secrets.NACOS_PASSWORD }}
