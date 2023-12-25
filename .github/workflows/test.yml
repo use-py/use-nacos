@@ -45,3 +45,7 @@ jobs:
         run: |
           source .venv/bin/activate
           pytest tests/
+        env:
+          NACOS_SERVER_ADDR: ${{ secrets.NACOS_SERVER_ADDR }}
+          NACOS_USERNAME: ${{ secrets.NACOS_USERNAME }}
+          NACOS_PASSWORD: ${{ secrets.NACOS_PASSWORD }}
