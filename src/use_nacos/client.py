@@ -1,7 +1,8 @@
 import logging
+import os
 from abc import abstractmethod
 from json import JSONDecodeError
-from typing import Union, Any, Optional, Dict, List, Generator
+from typing import Any, Optional, Dict, List, Generator
 
 import httpx
 from httpx import Request, Response, Auth, HTTPTransport, AsyncHTTPTransport
@@ -11,7 +12,7 @@ from .endpoints import (
     ConfigAsyncEndpoint, InstanceAsyncEndpoint
 )
 from .exception import HTTPResponseError
-from .typings import SyncAsync
+from .typings import SyncAsync, HttpxClient
 
 logger = logging.getLogger(__name__)
 
@@ -23,18 +24,18 @@ class BaseClient:
 
     def __init__(
             self,
-            client: Union[httpx.Client, httpx.AsyncClient],
+            client: HttpxClient,
             server_addr: Optional[str] = None,
             username: Optional[str] = None,
             password: Optional[str] = None,
             namespace_id: Optional[str] = None,
     ):
-        self.server_addr = server_addr or DEFAULT_SERVER_ADDR
-        self.username = username
-        self.password = password
-        self.namespace_id = namespace_id or DEFAULT_NAMESPACE
+        self.server_addr = server_addr or os.environ.get("NACOS_SERVER_ADDR") or DEFAULT_SERVER_ADDR
+        self.username = username or os.environ.get("NACOS_USERNAME")
+        self.password = password or os.environ.get("NACOS_PASSWORD")
+        self.namespace_id = namespace_id or os.environ.get("NACOS_NAMESPACE") or DEFAULT_NAMESPACE
 
-        self._clients: List[Union[httpx.Client, httpx.AsyncClient]] = []
+        self._clients: List[HttpxClient] = []
         self.client = client
         # endpoints
         self.config = ConfigEndpoint(self)
@@ -43,11 +44,11 @@ class BaseClient:
         self.namespace = NamespaceEndpoint(self)
 
     @property
-    def client(self) -> Union[httpx.Client, httpx.AsyncClient]:
+    def client(self) -> HttpxClient:
         return self._clients[-1]
 
     @client.setter
-    def client(self, client: Union[httpx.Client, httpx.AsyncClient]) -> None:
+    def client(self, client: HttpxClient) -> None:
         client.base_url = httpx.URL(self.server_addr)
         client.timeout = httpx.Timeout(timeout=60_000 / 1_000)
         client.headers = httpx.Headers(
@@ -112,7 +113,11 @@ class NacosClient(BaseClient):
         """ Nacos Sync Client """
         client = client or httpx.Client(transport=HTTPTransport(retries=http_retries))
         super().__init__(
-            client, server_addr, username, password, namespace_id
+            client=client,
+            server_addr=server_addr,
+            username=username,
+            password=password,
+            namespace_id=namespace_id
         )
 
     def request(
@@ -152,7 +157,13 @@ class NacosAsyncClient(BaseClient):
     ):
         """ Nacos Async Client """
         client = client or httpx.AsyncClient(transport=AsyncHTTPTransport(retries=http_retries))
-        super().__init__(client, server_addr, username, password, namespace_id)
+        super().__init__(
+            client=client,
+            server_addr=server_addr,
+            username=username,
+            password=password,
+            namespace_id=namespace_id
+        )
         self.config = ConfigAsyncEndpoint(self)
         self.instance = InstanceAsyncEndpoint(self)
 
