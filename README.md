@@ -1,7 +1,7 @@
 # use-nacos
 
 <a href="https://github.com/use-py/use-nacos/actions/workflows/test.yml?query=event%3Apush+branch%3Amain" target="_blank">
-    <img src="https://github.com/use-py/use-nacos/workflows/test%20suite/badge.svg?branch=main&event=push" alt="Test">
+    <img src="https://github.com/use-py/use-nacos/actions/workflows/test.yml/badge.svg?branch=main&event=push" alt="Test">
 </a>
 <a href="https://pypi.org/project/use-nacos" target="_blank">
     <img src="https://img.shields.io/pypi/v/use-nacos.svg" alt="Package version">
