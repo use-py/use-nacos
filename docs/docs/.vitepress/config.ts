@@ -1,8 +1,8 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: "use-nacos",
-  description: "Python Nacos 客户端库",
+  title: 'use-nacos',
+  description: 'Python Nacos 客户端库',
   lang: 'zh-CN',
   themeConfig: {
     logo: '/logo.png',
@@ -10,7 +10,7 @@ export default defineConfig({
       { text: '首页', link: '/' },
       { text: '指南', link: '/guide/' },
       { text: 'API', link: '/api/' },
-      { text: 'GitHub', link: 'https://github.com/use-py/use-nacos' }
+      { text: 'GitHub', link: 'https://github.com/use-py/use-nacos' },
     ],
     sidebar: {
       '/guide/': [
@@ -19,19 +19,12 @@ export default defineConfig({
           items: [
             { text: '简介', link: '/guide/' },
             { text: '快速开始', link: '/guide/getting-started' },
-            { text: '配置管理', link: '/guide/config' },
-            { text: '服务发现', link: '/guide/discovery' }
-          ]
+          ],
         },
         {
           text: '进阶',
-          items: [
-            { text: '认证配置', link: '/guide/auth' },
-            { text: '命名空间', link: '/guide/namespace' },
-            { text: '集群配置', link: '/guide/cluster' },
-            { text: '最佳实践', link: '/guide/best-practices' }
-          ]
-        }
+          items: [{ text: '认证配置', link: '/api/auth' }],
+        },
       ],
       '/api/': [
         {
@@ -40,17 +33,17 @@ export default defineConfig({
             { text: '概述', link: '/api/' },
             { text: 'NacosClient', link: '/api/client' },
             { text: '配置 API', link: '/api/config' },
-            { text: '服务发现 API', link: '/api/discovery' }
-          ]
-        }
-      ]
+            { text: '服务发现 API', link: '/api/discovery' },
+          ],
+        },
+      ],
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/use-py/use-nacos' }
+      { icon: 'github', link: 'https://github.com/use-py/use-nacos' },
     ],
     footer: {
       message: '基于 Apache 2.0 许可发布',
-      copyright: 'Copyright © 2024 use-nacos 团队'
-    }
-  }
-})
+      copyright: 'Copyright © 2024 use-nacos 团队',
+    },
+  },
+});

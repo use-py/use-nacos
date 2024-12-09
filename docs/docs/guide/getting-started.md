@@ -101,6 +101,6 @@ except NacosException as e:
 
 ## 下一步
 
-- 了解更多[配置管理](./config)功能
-- 探索[服务发现](./discovery)特性
-- 查看[认证配置](./auth)说明
+- 了解更多[配置管理](../api/config)功能
+- 探索[服务发现](../api/discovery)特性
+- 查看[认证配置](../api/auth)说明
