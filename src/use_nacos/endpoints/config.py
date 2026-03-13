@@ -2,38 +2,37 @@ import asyncio
 import hashlib
 import logging
 import threading
-from typing import Optional, Any, Callable, Union
+from typing import Any, Callable, Optional, Union
 
 import httpx
 
-from .endpoint import Endpoint
 from ..cache import BaseCache, MemoryCache, memory_cache
 from ..exception import HTTPResponseError
-from ..serializer import Serializer, AutoSerializer
+from ..serializer import AutoSerializer, Serializer
 from ..typings import SyncAsync
+from .endpoint import Endpoint
 
 logger = logging.getLogger(__name__)
 
 
 def _get_md5(content: Any):
     string_content = str(content) if not isinstance(content, str) else content
-    return hashlib.md5(string_content.encode('utf-8')).hexdigest() if content else ''
+    return hashlib.md5(string_content.encode("utf-8")).hexdigest() if content else ""
 
 
 def _get_config_key(data_id: str, group: str, tenant: str):
     # because `#` is illegal character in Nacos
-    return '#'.join([data_id, group, tenant])
+    return "#".join([data_id, group, tenant])
 
 
 def _parse_config_key(key: str):
-    return key.split('#')
+    return key.split("#")
 
 
 def _serialize_config(
-        config: Any,
-        serializer: Optional[Union["Serializer", bool]] = None
+    config: Any, serializer: Optional[Union["Serializer", bool]] = None
 ):
-    """ Serialize config with serializer """
+    """Serialize config with serializer"""
     if isinstance(serializer, bool) and serializer is True:
         serializer = AutoSerializer()
     if isinstance(serializer, Serializer):
@@ -44,10 +43,7 @@ def _serialize_config(
 class _BaseConfigEndpoint(Endpoint):
 
     def _get(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = ''
+        self, data_id: str, group: str, tenant: Optional[str] = ""
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/cs/configs",
@@ -56,16 +52,16 @@ class _BaseConfigEndpoint(Endpoint):
                 "group": group,
                 "tenant": tenant,
             },
-            serialized=False
+            serialized=False,
         )
 
     def publish(
-            self,
-            data_id: str,
-            group: str,
-            content: str,
-            tenant: Optional[str] = '',
-            type: Optional[str] = None,
+        self,
+        data_id: str,
+        group: str,
+        content: str,
+        tenant: Optional[str] = "",
+        type: Optional[str] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/cs/configs",
@@ -76,14 +72,14 @@ class _BaseConfigEndpoint(Endpoint):
                 "tenant": tenant,
                 "content": content,
                 "type": type,
-            }
+            },
         )
 
     def delete(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = '',
+        self,
+        data_id: str,
+        group: str,
+        tenant: Optional[str] = "",
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/cs/configs",
@@ -92,25 +88,25 @@ class _BaseConfigEndpoint(Endpoint):
                 "dataId": data_id,
                 "group": group,
                 "tenant": tenant,
-            }
+            },
         )
 
     @staticmethod
     def _format_listening_configs(
-            data_id: str,
-            group: str,
-            content_md5: Optional[str] = None,
-            tenant: Optional[str] = ''
+        data_id: str,
+        group: str,
+        content_md5: Optional[str] = None,
+        tenant: Optional[str] = "",
     ) -> str:
-        return u'\x02'.join([data_id, group, content_md5 or "", tenant]) + u'\x01'
+        return "\x02".join([data_id, group, content_md5 or "", tenant]) + "\x01"
 
     def subscriber(
-            self,
-            data_id: str,
-            group: str,
-            content_md5: Optional[str] = None,
-            tenant: Optional[str] = '',
-            timeout: Optional[int] = 30_000,
+        self,
+        data_id: str,
+        group: str,
+        content_md5: Optional[str] = None,
+        tenant: Optional[str] = "",
+        timeout: Optional[int] = 30_000,
     ) -> SyncAsync[Any]:
         listening_configs = self._format_listening_configs(
             data_id, group, content_md5, tenant
@@ -118,13 +114,11 @@ class _BaseConfigEndpoint(Endpoint):
         return self.client.request(
             "/nacos/v1/cs/configs/listener",
             method="POST",
-            body={
-                "Listening-Configs": listening_configs
-            },
+            body={"Listening-Configs": listening_configs},
             headers={
                 "Long-Pulling-Timeout": f"{timeout}",
             },
-            timeout=timeout
+            timeout=timeout,
         )
 
 
@@ -138,14 +132,14 @@ class ConfigOperationMixin:
         callback(config)
 
     def get(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = '',
-            *,
-            serializer: Optional[Union["Serializer", bool]] = None,
-            cache: Optional[BaseCache] = None,
-            default: Optional[str] = None
+        self,
+        data_id: str,
+        group: str,
+        tenant: Optional[str] = "",
+        *,
+        serializer: Optional[Union["Serializer", bool]] = None,
+        cache: Optional[BaseCache] = None,
+        default: Optional[str] = None,
     ) -> SyncAsync[Any]:
         cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
@@ -155,7 +149,9 @@ class ConfigOperationMixin:
             cache.set(config_key, config)
             return _serialize_config(config, serializer)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
-            logger.error("Failed to get config from server, try to get from cache. %s", exc)
+            logger.error(
+                "Failed to get config from server, try to get from cache. %s", exc
+            )
             return _serialize_config(cache.get(config_key), serializer)
         except HTTPResponseError as exc:
             logger.debug("Failed to get config from server. %s", exc)
@@ -164,18 +160,18 @@ class ConfigOperationMixin:
             raise
 
     def subscribe(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = '',
-            timeout: Optional[int] = 30_000,
-            serializer: Optional[Union["Serializer", bool]] = None,
-            cache: Optional[BaseCache] = None,
-            callback: Optional[Callable] = None
+        self,
+        data_id: str,
+        group: str,
+        tenant: Optional[str] = "",
+        timeout: Optional[int] = 30_000,
+        serializer: Optional[Union["Serializer", bool]] = None,
+        cache: Optional[BaseCache] = None,
+        callback: Optional[Callable] = None,
     ) -> SyncAsync[Any]:
         cache = cache or MemoryCache()
         config_key = _get_config_key(data_id, group, tenant)
-        last_md5 = _get_md5(cache.get(config_key) or '')
+        last_md5 = _get_md5(cache.get(config_key) or "")
         stop_event = threading.Event()
         stop_event.cancel = stop_event.set
 
@@ -183,7 +179,9 @@ class ConfigOperationMixin:
             nonlocal last_md5
             while not stop_event.is_set():
                 try:
-                    response = self.subscriber(data_id, group, last_md5, tenant, timeout)
+                    response = self.subscriber(
+                        data_id, group, last_md5, tenant, timeout
+                    )
                     if not response:
                         continue
                     logging.info("Configuration update detected.")
@@ -214,14 +212,14 @@ class ConfigAsyncOperationMixin:
             callback(config)
 
     async def get(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = '',
-            *,
-            serializer: Optional[Union["Serializer", bool]] = None,
-            cache: Optional[BaseCache] = None,
-            default: Optional[str] = None
+        self,
+        data_id: str,
+        group: str,
+        tenant: Optional[str] = "",
+        *,
+        serializer: Optional[Union["Serializer", bool]] = None,
+        cache: Optional[BaseCache] = None,
+        default: Optional[str] = None,
     ) -> SyncAsync[Any]:
         cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
@@ -230,7 +228,9 @@ class ConfigAsyncOperationMixin:
             cache.set(config_key, config)
             return _serialize_config(config, serializer)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
-            logger.error("Failed to get config from server, try to get from cache. %s", exc)
+            logger.error(
+                "Failed to get config from server, try to get from cache. %s", exc
+            )
             return _serialize_config(cache.get(config_key), serializer)
         except HTTPResponseError as exc:
             logger.debug("Failed to get config from server. %s", exc)
@@ -239,18 +239,18 @@ class ConfigAsyncOperationMixin:
             raise
 
     async def subscribe(
-            self,
-            data_id: str,
-            group: str,
-            tenant: Optional[str] = '',
-            timeout: Optional[int] = 30_000,
-            serializer: Optional[Union["Serializer", bool]] = None,
-            cache: Optional[BaseCache] = None,
-            callback: Optional[Callable] = None,
+        self,
+        data_id: str,
+        group: str,
+        tenant: Optional[str] = "",
+        timeout: Optional[int] = 30_000,
+        serializer: Optional[Union["Serializer", bool]] = None,
+        cache: Optional[BaseCache] = None,
+        callback: Optional[Callable] = None,
     ) -> SyncAsync[Any]:
         cache = cache or MemoryCache()
         config_key = _get_config_key(data_id, group, tenant)
-        last_md5 = _get_md5(cache.get(config_key) or '')
+        last_md5 = _get_md5(cache.get(config_key) or "")
         stop_event = threading.Event()
         stop_event.cancel = stop_event.set
 
@@ -277,9 +277,7 @@ class ConfigAsyncOperationMixin:
         return asyncio.create_task(_async_subscriber())
 
 
-class ConfigEndpoint(_BaseConfigEndpoint, ConfigOperationMixin):
-    ...
+class ConfigEndpoint(_BaseConfigEndpoint, ConfigOperationMixin): ...
 
 
-class ConfigAsyncEndpoint(_BaseConfigEndpoint, ConfigAsyncOperationMixin):
-    ...
+class ConfigAsyncEndpoint(_BaseConfigEndpoint, ConfigAsyncOperationMixin): ...

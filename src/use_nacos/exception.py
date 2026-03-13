@@ -17,9 +17,7 @@ class HTTPResponseError(Exception):
 
     def __init__(self, response: httpx.Response, message: Optional[str] = None) -> None:
         if message is None:
-            message = (
-                f"Request to Nacos API failed: {response.text}"
-            )
+            message = f"Request to Nacos API failed: {response.text}"
         super().__init__(message)
         self.status = response.status_code
         self.headers = response.headers

@@ -1,21 +1,18 @@
-install: ## Run `poetry install`
-	poetry install --no-root
+install: ## Run `uv sync`
+	uv sync
+	uv sync --group test
 
 lint:
-	poetry run isort --check .
-	poetry run black --check .
-	poetry run flake8 src tests
+	uv run isort --check .
+	uv run black --check .
+	uv run flake8 src tests
 
 format: ## Formats you code with Black
-	poetry run isort .
-	poetry run black .
-
-run: ## run `poetry run use-nacos`
-	poetry run use-nacos
-
+	uv run isort .
+	uv run black .
 
 test:
-	poetry run pytest -v tests
+	uv run pytest -v tests
 
 publish:
-	poetry publish --build
+	uv publish

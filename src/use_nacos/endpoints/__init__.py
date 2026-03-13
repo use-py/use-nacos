@@ -1,7 +1,7 @@
-from .config import ConfigEndpoint, ConfigAsyncEndpoint
-from .instance import InstanceEndpoint, InstanceAsyncEndpoint
-from .service import ServiceEndpoint
+from .config import ConfigAsyncEndpoint, ConfigEndpoint
+from .instance import InstanceAsyncEndpoint, InstanceEndpoint
 from .namespace import NamespaceEndpoint
+from .service import ServiceEndpoint
 
 __all__ = [
     "ConfigEndpoint",
@@ -9,5 +9,5 @@ __all__ = [
     "InstanceEndpoint",
     "InstanceAsyncEndpoint",
     "ServiceEndpoint",
-    "NamespaceEndpoint"
+    "NamespaceEndpoint",
 ]

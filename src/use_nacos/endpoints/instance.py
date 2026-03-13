@@ -4,14 +4,14 @@ import logging
 import threading
 import time
 from functools import partial
-from typing import Optional, Any, Literal, List, TypedDict
+from typing import Any, List, Literal, Optional, TypedDict
 
 import httpx
 
-from .endpoint import Endpoint
 from .._chooser import Chooser
 from ..exception import EmptyHealthyInstanceError
-from ..typings import SyncAsync, BeatType
+from ..typings import BeatType, SyncAsync
+from .endpoint import Endpoint
 
 _ConsistencyType = Literal["ephemeral", "persist"]
 
@@ -28,11 +28,8 @@ class InstanceType(TypedDict):
 
 
 def _choose_one_healthy(instances: List[InstanceType]) -> InstanceType:
-    """ Choose one healthy instance """
-    hosts = [
-        (host, host.get('weight'))
-        for host in instances
-    ]
+    """Choose one healthy instance"""
+    hosts = [(host, host.get("weight")) for host in instances]
     if not hosts:
         raise EmptyHealthyInstanceError("No healthy instance found")
     chooser = Chooser(hosts)
@@ -46,14 +43,15 @@ class InstanceOperationMixin:
         return partial(self.request, service_name=attr)
 
     def request(
-            self,
-            method: str,
-            path: str,
-            instance: Optional[InstanceType] = None,
-            service_name: Optional[str] = None,
-            *args, **kwargs
+        self,
+        method: str,
+        path: str,
+        instance: Optional[InstanceType] = None,
+        service_name: Optional[str] = None,
+        *args,
+        **kwargs,
     ) -> SyncAsync[Any]:
-        """ Request with instance """
+        """Request with instance"""
         if not any([instance, service_name]):
             raise ValueError("Either `instance` or `service_name` should be provided")
         if not instance:
@@ -62,17 +60,17 @@ class InstanceOperationMixin:
         return httpx.Client().request(method=method, url=url, *args, **kwargs)
 
     def heartbeat(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            weight: Optional[float] = 1.0,
-            namespace_id: Optional[str] = '',
-            group_name: Optional[str] = None,
-            ephemeral: Optional[bool] = True,
-            interval: Optional[int] = 1_000,
-            skip_exception: Optional[bool] = True,
-            **kwargs
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        weight: Optional[float] = 1.0,
+        namespace_id: Optional[str] = "",
+        group_name: Optional[str] = None,
+        ephemeral: Optional[bool] = True,
+        interval: Optional[int] = 1_000,
+        skip_exception: Optional[bool] = True,
+        **kwargs,
     ) -> SyncAsync[Any]:
         stop_event = threading.Event()
         stop_event.cancel = stop_event.set
@@ -89,7 +87,7 @@ class InstanceOperationMixin:
                         namespace_id=namespace_id,
                         group_name=group_name,
                         ephemeral=ephemeral,
-                        **kwargs
+                        **kwargs,
                     )
                 except Exception as exc:
                     logger.error("Heartbeat error: %s", exc)
@@ -102,20 +100,19 @@ class InstanceOperationMixin:
         return stop_event
 
     def get_one_healthy(
-            self,
-            service_name: str,
-            namespace_id: Optional[str] = None,
-            group_name: Optional[str] = None,
-            clusters: Optional[str] = None,
-
+        self,
+        service_name: str,
+        namespace_id: Optional[str] = None,
+        group_name: Optional[str] = None,
+        clusters: Optional[str] = None,
     ) -> InstanceType:
-        """ Get a healthy instance """
+        """Get a healthy instance"""
         instances = self.list(
             service_name=service_name,
             namespace_id=namespace_id,
             group_name=group_name,
             clusters=clusters,
-            healthy_only=True
+            healthy_only=True,
         )
         return _choose_one_healthy(instances["hosts"])
 
@@ -126,33 +123,36 @@ class InstanceAsyncOperationMixin:
         return partial(self.request, service_name=attr)
 
     async def request(
-            self,
-            method: str,
-            path: str,
-            instance: Optional[InstanceType] = None,
-            service_name: Optional[str] = None,
-            *args, **kwargs
+        self,
+        method: str,
+        path: str,
+        instance: Optional[InstanceType] = None,
+        service_name: Optional[str] = None,
+        *args,
+        **kwargs,
     ) -> SyncAsync[Any]:
-        """ Request with instance """
+        """Request with instance"""
         if not any([instance, service_name]):
             raise ValueError("Either `instance` or `service_name` should be provided")
         if not instance:
             instance = await self.get_one_healthy(service_name)
         url = f"http://{instance['ip']}:{instance['port']}{path}"  # noqa
-        return await httpx.AsyncClient().request(method=method, url=url, *args, **kwargs)
+        return await httpx.AsyncClient().request(
+            method=method, url=url, *args, **kwargs
+        )
 
     async def heartbeat(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            weight: Optional[float] = 1.0,
-            namespace_id: Optional[str] = '',
-            group_name: Optional[str] = None,
-            ephemeral: Optional[bool] = True,
-            interval: Optional[int] = 1_000,
-            skip_exception: Optional[bool] = True,
-            **kwargs
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        weight: Optional[float] = 1.0,
+        namespace_id: Optional[str] = "",
+        group_name: Optional[str] = None,
+        ephemeral: Optional[bool] = True,
+        interval: Optional[int] = 1_000,
+        skip_exception: Optional[bool] = True,
+        **kwargs,
     ) -> SyncAsync[Any]:
         stop_event = threading.Event()
         stop_event.cancel = stop_event.set
@@ -169,7 +169,7 @@ class InstanceAsyncOperationMixin:
                         namespace_id=namespace_id,
                         group_name=group_name,
                         ephemeral=ephemeral,
-                        **kwargs
+                        **kwargs,
                     )
                 except asyncio.CancelledError:
                     break
@@ -182,42 +182,41 @@ class InstanceAsyncOperationMixin:
         return asyncio.create_task(_async_heartbeat())
 
     async def get_one_healthy(
-            self,
-            service_name: str,
-            namespace_id: Optional[str] = None,
-            group_name: Optional[str] = None,
-            clusters: Optional[str] = None,
-
+        self,
+        service_name: str,
+        namespace_id: Optional[str] = None,
+        group_name: Optional[str] = None,
+        clusters: Optional[str] = None,
     ) -> InstanceType:
-        """ Get a healthy instance """
+        """Get a healthy instance"""
         instances = await self.list(
             service_name=service_name,
             namespace_id=namespace_id,
             group_name=group_name,
             clusters=clusters,
-            healthy_only=True
+            healthy_only=True,
         )
         return _choose_one_healthy(instances["hosts"])
 
 
 class _BaseInstanceEndpoint(Endpoint):
-    """ Instance Management API """
+    """Instance Management API"""
 
     def register(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            namespace_id: Optional[str] = '',
-            weight: Optional[float] = 1.0,
-            enabled: Optional[bool] = True,
-            healthy: Optional[bool] = True,
-            metadata: Optional[str] = None,
-            cluster_name: Optional[str] = None,
-            group_name: Optional[str] = None,
-            ephemeral: Optional[bool] = None,
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        namespace_id: Optional[str] = "",
+        weight: Optional[float] = 1.0,
+        enabled: Optional[bool] = True,
+        healthy: Optional[bool] = True,
+        metadata: Optional[str] = None,
+        cluster_name: Optional[str] = None,
+        group_name: Optional[str] = None,
+        ephemeral: Optional[bool] = None,
     ) -> SyncAsync[Any]:
-        """ Register instance """
+        """Register instance"""
 
         return self.client.request(
             "/nacos/v1/ns/instance",
@@ -234,18 +233,18 @@ class _BaseInstanceEndpoint(Endpoint):
                 "clusterName": cluster_name,
                 "groupName": group_name,
                 "ephemeral": ephemeral,
-            }
+            },
         )
 
     def delete(
-            self,
-            service_name: str,
-            ip: str,
-            port: str,
-            group_name: Optional[str] = None,
-            cluster_name: Optional[str] = None,
-            namespace_id: Optional[str] = None,
-            ephemeral: Optional[bool] = None,
+        self,
+        service_name: str,
+        ip: str,
+        port: str,
+        group_name: Optional[str] = None,
+        cluster_name: Optional[str] = None,
+        namespace_id: Optional[str] = None,
+        ephemeral: Optional[bool] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/instance",
@@ -258,16 +257,16 @@ class _BaseInstanceEndpoint(Endpoint):
                 "clusterName": cluster_name,
                 "namespaceId": namespace_id,
                 "ephemeral": ephemeral,
-            }
+            },
         )
 
     def list(
-            self,
-            service_name: str,
-            namespace_id: Optional[str] = None,
-            group_name: Optional[str] = None,
-            clusters: Optional[str] = None,
-            healthy_only: Optional[bool] = False,
+        self,
+        service_name: str,
+        namespace_id: Optional[str] = None,
+        group_name: Optional[str] = None,
+        clusters: Optional[str] = None,
+        healthy_only: Optional[bool] = False,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/instance/list",
@@ -277,21 +276,21 @@ class _BaseInstanceEndpoint(Endpoint):
                 "groupName": group_name,
                 "clusters": clusters,
                 "healthyOnly": healthy_only,
-            }
+            },
         )
 
     def update(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            namespace_id: Optional[str] = None,
-            weight: Optional[float] = None,
-            enabled: Optional[bool] = None,
-            metadata: Optional[dict] = None,
-            cluster_name: Optional[str] = None,
-            group_name: Optional[str] = None,
-            ephemeral: Optional[bool] = None,
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        namespace_id: Optional[str] = None,
+        weight: Optional[float] = None,
+        enabled: Optional[bool] = None,
+        metadata: Optional[dict] = None,
+        cluster_name: Optional[str] = None,
+        group_name: Optional[str] = None,
+        ephemeral: Optional[bool] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/instance",
@@ -307,19 +306,19 @@ class _BaseInstanceEndpoint(Endpoint):
                 "clusterName": cluster_name,
                 "groupName": group_name,
                 "ephemeral": ephemeral,
-            }
+            },
         )
 
     def get(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            namespace_id: Optional[str] = '',
-            group_name: Optional[str] = None,
-            cluster: Optional[str] = None,
-            healthy_only: Optional[bool] = False,
-            ephemeral: Optional[bool] = None,
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        namespace_id: Optional[str] = "",
+        group_name: Optional[str] = None,
+        cluster: Optional[str] = None,
+        healthy_only: Optional[bool] = False,
+        ephemeral: Optional[bool] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/instance",
@@ -332,19 +331,19 @@ class _BaseInstanceEndpoint(Endpoint):
                 "cluster": cluster,
                 "healthyOnly": healthy_only,
                 "ephemeral": ephemeral,
-            }
+            },
         )
 
     def beat(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            weight: Optional[float] = 1.0,
-            namespace_id: Optional[str] = '',
-            group_name: Optional[str] = None,
-            ephemeral: Optional[bool] = None,
-            **kwargs
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        weight: Optional[float] = 1.0,
+        namespace_id: Optional[str] = "",
+        group_name: Optional[str] = None,
+        ephemeral: Optional[bool] = None,
+        **kwargs,
     ) -> SyncAsync[Any]:
         # see: https://github.com/alibaba/nacos/issues/10448#issuecomment-1538178112
         serverName = f"{group_name}@@{service_name}" if group_name else service_name
@@ -354,7 +353,7 @@ class _BaseInstanceEndpoint(Endpoint):
             "port": port,
             "weight": weight,
             "ephemeral": ephemeral,
-            **kwargs
+            **kwargs,
         }
         return self.client.request(
             "/nacos/v1/ns/instance/beat",
@@ -364,18 +363,18 @@ class _BaseInstanceEndpoint(Endpoint):
                 "beat": json.dumps(beat_params),
                 "namespaceId": namespace_id,
                 "groupName": group_name,
-            }
+            },
         )
 
     def update_health(
-            self,
-            service_name: str,
-            ip: str,
-            port: int,
-            healthy: bool,
-            namespace_id: Optional[str] = '',
-            group_name: Optional[str] = None,
-            cluster_name: Optional[str] = None,
+        self,
+        service_name: str,
+        ip: str,
+        port: int,
+        healthy: bool,
+        namespace_id: Optional[str] = "",
+        group_name: Optional[str] = None,
+        cluster_name: Optional[str] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/health/instance",
@@ -388,16 +387,16 @@ class _BaseInstanceEndpoint(Endpoint):
                 "namespaceId": namespace_id,
                 "groupName": group_name,
                 "clusterName": cluster_name,
-            }
+            },
         )
 
     def batch_update_metadata(
-            self,
-            service_name: str,
-            namespace_id: str,
-            metadata: dict,
-            consistency_type: Optional["_ConsistencyType"] = None,
-            instances: Optional[list] = None,
+        self,
+        service_name: str,
+        namespace_id: str,
+        metadata: dict,
+        consistency_type: Optional["_ConsistencyType"] = None,
+        instances: Optional[list] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/instance/metadata/batch",
@@ -408,16 +407,16 @@ class _BaseInstanceEndpoint(Endpoint):
                 "metadata": json.dumps(metadata),
                 "consistencyType": consistency_type,
                 "instances": json.dumps(instances),
-            }
+            },
         )
 
     def batch_delete_metadata(
-            self,
-            service_name: str,
-            namespace_id: str,
-            metadata: dict,
-            consistency_type: Optional["_ConsistencyType"] = None,
-            instances: Optional[list] = None,
+        self,
+        service_name: str,
+        namespace_id: str,
+        metadata: dict,
+        consistency_type: Optional["_ConsistencyType"] = None,
+        instances: Optional[list] = None,
     ) -> SyncAsync[Any]:
         return self.client.request(
             "/nacos/v1/ns/instance/metadata/batch",
@@ -428,13 +427,11 @@ class _BaseInstanceEndpoint(Endpoint):
                 "metadata": json.dumps(metadata),
                 "consistencyType": consistency_type,
                 "instances": json.dumps(instances),
-            }
+            },
         )
 
 
-class InstanceEndpoint(_BaseInstanceEndpoint, InstanceOperationMixin):
-    ...
+class InstanceEndpoint(_BaseInstanceEndpoint, InstanceOperationMixin): ...
 
 
-class InstanceAsyncEndpoint(_BaseInstanceEndpoint, InstanceAsyncOperationMixin):
-    ...
+class InstanceAsyncEndpoint(_BaseInstanceEndpoint, InstanceAsyncOperationMixin): ...

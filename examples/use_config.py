@@ -9,19 +9,17 @@ client.config.publish("test_config", "DEFAULT_GROUP", "test_value")
 assert client.config.get("test_config", "DEFAULT_GROUP") == "test_value"
 
 # get config with default value
-assert client.config.get(
-    "test_config_miss", "DEFAULT_GROUP", default="default_value"
-) == "default_value"
+assert (
+    client.config.get("test_config_miss", "DEFAULT_GROUP", default="default_value")
+    == "default_value"
+)
 
 
 # subscribe config
+
 
 def config_update(config):
     print(config)
 
 
-client.config.subscribe(
-    "test_config",
-    "DEFAULT_GROUP",
-    callback=config_update
-)
+client.config.subscribe("test_config", "DEFAULT_GROUP", callback=config_update)
