@@ -20,10 +20,7 @@ async def lifespan(app: FastAPI):
         callback=config_update,
     )
     await nacos.instance.register(
-        service_name=f"python-api-1",
-        ip="10.10.10.1",
-        port=8000,
-        weight=1
+        service_name=f"python-api-1", ip="10.10.10.1", port=8000, weight=1
     )
     yield
     config_subscriber.cancel()
@@ -31,5 +28,5 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     uvicorn.run("in_fastapi:app", host="0.0.0.0", port=1081)

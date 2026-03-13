@@ -1,4 +1,4 @@
-from typing import Awaitable, Union, TypeVar, TypedDict, Optional
+from typing import Awaitable, Optional, TypedDict, TypeVar, Union
 
 import httpx
 

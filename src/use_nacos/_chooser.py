@@ -15,9 +15,9 @@ class Chooser:
         for item, weight in self.host_with_weight:
             if weight <= 0:
                 continue
-            if float('inf') == weight:
+            if float("inf") == weight:
                 weight = 10000.0
-            elif float('nan') == weight:
+            elif float("nan") == weight:
                 weight = 1.0
             origin_weight_sum += weight
             self.items.append(item)
@@ -26,19 +26,25 @@ class Chooser:
             return
 
         # Computing the exact weights for each item
-        exact_weights = [weight / origin_weight_sum for _, weight in self.host_with_weight if weight > 0]
+        exact_weights = []
+        for _, weight in self.host_with_weight:
+            if weight > 0:
+                exact_weights.append(weight / origin_weight_sum)
 
         # Initializing the cumulative weights array
         random_range = 0.0
         for single_weight in exact_weights:
-            random_range += single_weight
+            random_range = random_range + single_weight
             self.weights.append(random_range)
 
         # Checking the final weight
         double_precision_delta = 0.0001
         if abs(self.weights[-1] - 1) < double_precision_delta:
             return
-        raise ValueError("Cumulative Weight calculate wrong, the sum of probabilities does not equal 1.")
+        raise ValueError(
+            "Cumulative Weight calculate wrong, the sum of probabilities "
+            "does not equal 1."
+        )
 
     def random_with_weight(self):
         # Generating a random number between 0 and 1

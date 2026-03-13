@@ -1,6 +1,3 @@
-from use_nacos.client import NacosClient, NacosAsyncClient
+from use_nacos.client import NacosAsyncClient, NacosClient
 
-__all__ = [
-    "NacosClient",
-    "NacosAsyncClient"
-]
+__all__ = ["NacosClient", "NacosAsyncClient"]
