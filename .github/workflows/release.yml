@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - '*.*.*'
+    paths:
+      - "src/**"
+      - "pyproject.toml"
+      - ".github/**"
 
 jobs:
   release:
