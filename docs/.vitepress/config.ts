@@ -21,19 +21,37 @@ export default defineConfig({
             { text: '快速开始', link: '/guide/getting-started' },
           ],
         },
-        {
-          text: '进阶',
-          items: [{ text: '认证配置', link: '/api/auth' }],
-        },
+
       ],
       '/api/': [
         {
-          text: 'API 参考',
+          text: '客户端',
           items: [
             { text: '概述', link: '/api/' },
             { text: 'NacosClient', link: '/api/client' },
-            { text: '配置 API', link: '/api/config' },
+            { text: '认证', link: '/api/auth' },
+          ],
+        },
+        {
+          text: '服务管理',
+          items: [
+            { text: '服务 API', link: '/api/service' },
+            { text: '实例 API', link: '/api/instance' },
             { text: '服务发现 API', link: '/api/discovery' },
+          ],
+        },
+        {
+          text: '配置管理',
+          items: [
+            { text: '配置 API', link: '/api/config' },
+            { text: '序列化 API', link: '/api/serializer' },
+            { text: '缓存 API', link: '/api/cache' },
+          ],
+        },
+        {
+          text: '错误处理',
+          items: [
+            { text: '异常 API', link: '/api/exception' },
           ],
         },
       ],
