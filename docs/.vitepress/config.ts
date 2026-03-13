@@ -38,6 +38,13 @@ export default defineConfig({
             { text: '服务 API', link: '/api/service' },
             { text: '实例 API', link: '/api/instance' },
             { text: '服务发现 API', link: '/api/discovery' },
+            { text: '命名空间 API', link: '/api/namespace' },
+          ],
+        },
+        {
+          text: '核心组件',
+          items: [
+            { text: '选择器', link: '/api/_chooser' },
           ],
         },
         {
