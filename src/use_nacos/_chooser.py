@@ -1,15 +1,45 @@
-# created by gpt-4
+"""Weighted random chooser for instance selection.
+
+This module implements a weighted random selection algorithm for
+choosing among multiple service instances based on their weights.
+"""
 
 import random
+from typing import Any, List, Tuple
 
 
 class Chooser:
-    def __init__(self, host_with_weight: list):
-        self.host_with_weight = host_with_weight
-        self.items = []
-        self.weights = []
+    """Weighted random chooser for instance selection.
 
-    def refresh(self):
+    This class implements a weighted random selection algorithm that
+    selects items based on their relative weights. Items with higher
+    weights have a higher probability of being selected.
+
+    Example:
+        >>> hosts = [("instance1", 3.0), ("instance2", 1.0)]
+        >>> chooser = Chooser(hosts)
+        >>> chooser.refresh()
+        >>> selected = chooser.random_with_weight()
+    """
+
+    def __init__(self, host_with_weight: List[Tuple[Any, float]]) -> None:
+        """Initialize the chooser with weighted items.
+
+        Args:
+            host_with_weight: List of (item, weight) tuples.
+        """
+        self.host_with_weight = host_with_weight
+        self.items: List[Any] = []
+        self.weights: List[float] = []
+
+    def refresh(self) -> None:
+        """Compute cumulative weights for random selection.
+
+        This method must be called before random_with_weight().
+
+        Raises:
+            ValueError: If the cumulative weights don't sum to 1.
+        """
         origin_weight_sum = 0.0
         # Preparing the valid items list and calculating the original weights sum
         for item, weight in self.host_with_weight:
@@ -46,7 +76,15 @@ class Chooser:
             "does not equal 1."
         )
 
-    def random_with_weight(self):
+    def random_with_weight(self) -> Any:
+        """Select an item using weighted random selection.
+
+        Returns:
+            A randomly selected item based on weights.
+
+        Note:
+            refresh() must be called before this method.
+        """
         # Generating a random number between 0 and 1
         random_value = random.random()
 
@@ -56,7 +94,19 @@ class Chooser:
         return self.items[index]
 
     @staticmethod
-    def _find_index(weights, value):
+    def _find_index(weights: List[float], value: float) -> int:
+        """Find the index where the value should be placed.
+
+        Uses binary search to find the correct position in the
+        cumulative weights array.
+
+        Args:
+            weights: Cumulative weights array.
+            value: Random value to find position for.
+
+        Returns:
+            Index where the value falls in the weight ranges.
+        """
         # Perform a binary search manually since weights are not just keys
         low = 0
         high = len(weights) - 1
