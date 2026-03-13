@@ -38,9 +38,18 @@ def _choose_one_healthy(instances: List[InstanceType]) -> InstanceType:
 
 
 class InstanceOperationMixin:
+    # Simple client cache for instance requests
+    _client_cache = {}
 
     def __getattr__(self, attr) -> SyncAsync[Any]:
         return partial(self.request, service_name=attr)
+
+    def _get_client(self, instance: InstanceType) -> httpx.Client:
+        """Get or create a cached client for the instance"""
+        cache_key = (instance["ip"], instance["port"])
+        if cache_key not in self._client_cache:
+            self._client_cache[cache_key] = httpx.Client()
+        return self._client_cache[cache_key]
 
     def request(
         self,
@@ -57,7 +66,8 @@ class InstanceOperationMixin:
         if not instance:
             instance = self.get_one_healthy(service_name)
         url = f"http://{instance['ip']}:{instance['port']}{path}"  # noqa
-        return httpx.Client().request(method=method, url=url, *args, **kwargs)
+        client = self._get_client(instance)
+        return client.request(method=method, url=url, *args, **kwargs)
 
     def heartbeat(
         self,
@@ -118,9 +128,18 @@ class InstanceOperationMixin:
 
 
 class InstanceAsyncOperationMixin:
+    # Simple client cache for instance requests
+    _client_cache = {}
 
     def __getattr__(self, attr) -> SyncAsync[Any]:
         return partial(self.request, service_name=attr)
+
+    async def _get_client(self, instance: InstanceType) -> httpx.AsyncClient:
+        """Get or create a cached client for the instance"""
+        cache_key = (instance["ip"], instance["port"])
+        if cache_key not in self._client_cache:
+            self._client_cache[cache_key] = httpx.AsyncClient()
+        return self._client_cache[cache_key]
 
     async def request(
         self,
@@ -137,9 +156,8 @@ class InstanceAsyncOperationMixin:
         if not instance:
             instance = await self.get_one_healthy(service_name)
         url = f"http://{instance['ip']}:{instance['port']}{path}"  # noqa
-        return await httpx.AsyncClient().request(
-            method=method, url=url, *args, **kwargs
-        )
+        client = await self._get_client(instance)
+        return await client.request(method=method, url=url, *args, **kwargs)
 
     async def heartbeat(
         self,

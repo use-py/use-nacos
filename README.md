@@ -107,9 +107,9 @@ if __name__ == '__main__':
 ## Developing
 
 ```text
-make install  # Run `poetry install`
-make lint  # Runs bandit and black in check mode
-make format  # Formats you code with Black
+make install  # Run `uv sync`
+make lint  # Runs isort, black and flake8 in check mode
+make format  # Formats you code with Black and isort
 make test  # run pytest with coverage
-make publish  # run `poetry publish --build` to build source and wheel package and publish to pypi
+make publish  # run `uv publish` to build source and wheel package and publish to pypi
 ```

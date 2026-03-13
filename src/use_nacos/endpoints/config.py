@@ -251,8 +251,7 @@ class ConfigAsyncOperationMixin:
         cache = cache or MemoryCache()
         config_key = _get_config_key(data_id, group, tenant)
         last_md5 = _get_md5(cache.get(config_key) or "")
-        stop_event = threading.Event()
-        stop_event.cancel = stop_event.set
+        stop_event = asyncio.Event()
 
         async def _async_subscriber():
             nonlocal last_md5
@@ -274,7 +273,13 @@ class ConfigAsyncOperationMixin:
                     logging.error(exc)
                     await asyncio.sleep(1)
 
-        return asyncio.create_task(_async_subscriber())
+        task = asyncio.create_task(_async_subscriber())
+
+        def cancel():
+            task.cancel()
+
+        stop_event.cancel = cancel
+        return stop_event
 
 
 class ConfigEndpoint(_BaseConfigEndpoint, ConfigOperationMixin): ...
