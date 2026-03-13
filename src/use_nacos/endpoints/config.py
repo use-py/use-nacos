@@ -6,7 +6,12 @@ from typing import Any, Callable, Optional, Union
 
 import httpx
 
-from ..cache import BaseCache, MemoryCache, memory_cache
+from ..cache import (
+    DEFAULT_CACHE_TTL,
+    BaseCache,
+    MemoryCache,
+    memory_cache,
+)
 from ..exception import HTTPResponseError
 from ..serializer import AutoSerializer, Serializer
 from ..typings import SyncAsync
@@ -145,16 +150,26 @@ class ConfigOperationMixin:
         config_key = _get_config_key(data_id, group, tenant)
         try:
             config = self._get(data_id, group, tenant)
-            # todo: this function need to be optimized
-            cache.set(config_key, config)
+            # Cache with TTL (default 5 minutes)
+            cache.set(config_key, config, ttl=DEFAULT_CACHE_TTL)
             return _serialize_config(config, serializer)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             logger.error(
-                "Failed to get config from server, try to get from cache. %s", exc
+                "Failed to get config from server, trying cache. "
+                "data_id=%s, group=%s, tenant=%s, error=%s",
+                data_id,
+                group,
+                tenant,
+                exc,
             )
             return _serialize_config(cache.get(config_key), serializer)
         except HTTPResponseError as exc:
-            logger.debug("Failed to get config from server. %s", exc)
+            logger.debug(
+                "Failed to get config from server. " "data_id=%s, group=%s, status=%d",
+                data_id,
+                group,
+                exc.status,
+            )
             if exc.status == 404 and default is not None:
                 return default
             raise
@@ -184,13 +199,25 @@ class ConfigOperationMixin:
                     )
                     if not response:
                         continue
-                    logging.info("Configuration update detected.")
+                    logging.info(
+                        "Configuration update detected. "
+                        "data_id=%s, group=%s, tenant=%s",
+                        data_id,
+                        group,
+                        tenant,
+                    )
                     last_config = self._get(data_id, group, tenant)
                     last_md5 = _get_md5(last_config)
-                    cache.set(config_key, last_config)
+                    # Cache with TTL (default 5 minutes)
+                    cache.set(config_key, last_config, ttl=DEFAULT_CACHE_TTL)
                     self._config_callback(callback, last_config, serializer)
                 except Exception as exc:
-                    logging.error(exc)
+                    logging.error(
+                        "Subscription error. data_id=%s, group=%s, error=%s",
+                        data_id,
+                        group,
+                        exc,
+                    )
                     stop_event.wait(1)
 
         thread = threading.Thread(target=_subscriber)
@@ -225,15 +252,26 @@ class ConfigAsyncOperationMixin:
         config_key = _get_config_key(data_id, group, tenant)
         try:
             config = await self._get(data_id, group, tenant)
-            cache.set(config_key, config)
+            # Cache with TTL (default 5 minutes)
+            cache.set(config_key, config, ttl=DEFAULT_CACHE_TTL)
             return _serialize_config(config, serializer)
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             logger.error(
-                "Failed to get config from server, try to get from cache. %s", exc
+                "Failed to get config from server, trying cache. "
+                "data_id=%s, group=%s, tenant=%s, error=%s",
+                data_id,
+                group,
+                tenant,
+                exc,
             )
             return _serialize_config(cache.get(config_key), serializer)
         except HTTPResponseError as exc:
-            logger.debug("Failed to get config from server. %s", exc)
+            logger.debug(
+                "Failed to get config from server. " "data_id=%s, group=%s, status=%d",
+                data_id,
+                group,
+                exc.status,
+            )
             if exc.status == 404 and default is not None:
                 return default
             raise
@@ -262,15 +300,29 @@ class ConfigAsyncOperationMixin:
                     )
                     if not response:
                         continue
-                    logging.info("Configuration update detected.")
+                    logging.info(
+                        "Configuration update detected. "
+                        "data_id=%s, group=%s, tenant=%s",
+                        data_id,
+                        group,
+                        tenant,
+                    )
                     last_config = await self._get(data_id, group, tenant)
                     last_md5 = _get_md5(last_config)
-                    cache.set(config_key, last_config)
+                    # Cache with TTL (default 5 minutes)
+                    cache.set(config_key, last_config, ttl=DEFAULT_CACHE_TTL)
                     await self._config_callback(callback, last_config, serializer)
                 except asyncio.CancelledError:
                     break
                 except Exception as exc:
-                    logging.error(exc)
+                    logging.error(
+                        "Subscription error. "
+                        "data_id=%s, group=%s, tenant=%s, error=%s",
+                        data_id,
+                        group,
+                        tenant,
+                        exc,
+                    )
                     await asyncio.sleep(1)
 
         task = asyncio.create_task(_async_subscriber())

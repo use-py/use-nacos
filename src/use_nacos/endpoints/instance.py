@@ -100,7 +100,13 @@ class InstanceOperationMixin:
                         **kwargs,
                     )
                 except Exception as exc:
-                    logger.error("Heartbeat error: %s", exc)
+                    logger.error(
+                        "Heartbeat error. " "service_name=%s, ip=%s, port=%d, error=%s",
+                        service_name,
+                        ip,
+                        port,
+                        exc,
+                    )
                     if skip_exception:
                         continue
                     raise exc
@@ -192,7 +198,13 @@ class InstanceAsyncOperationMixin:
                 except asyncio.CancelledError:
                     break
                 except Exception as exc:
-                    logger.error("Heartbeat error: %s", exc)
+                    logger.error(
+                        "Heartbeat error. " "service_name=%s, ip=%s, port=%d, error=%s",
+                        service_name,
+                        ip,
+                        port,
+                        exc,
+                    )
                     if skip_exception:
                         continue
                     raise exc
