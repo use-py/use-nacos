@@ -203,6 +203,21 @@ def test_mock_network_error_exception(config, mocker):
     assert config.get("test_config_1", "DEFAULT_GROUP") is None
 
 
+def test_mock_network_error_with_default(config, mocker):
+    """Test that default value is returned on network error with cache miss."""
+    mocker.patch.object(ConfigEndpoint, "_get", side_effect=httpx.TimeoutException(""))
+    # No cache, should return default
+    assert (
+        config.get("test_config_no_cache", "DEFAULT_GROUP", default="fallback_value")
+        == "fallback_value"
+    )
+    mocker.patch.object(ConfigEndpoint, "_get", side_effect=httpx.ConnectError(""))
+    assert (
+        config.get("test_config_no_cache2", "DEFAULT_GROUP", default="fallback_value")
+        == "fallback_value"
+    )
+
+
 def test_config_from_cache(config, mocker):
     mc = MemoryCache()
     mc.set("test_config_cache#DEFAULT_GROUP#", "abc")
@@ -222,3 +237,40 @@ def test_config_from_cache(config, mocker):
 )
 def test_config_serializer(conf_str, serializer, expected):
     assert conf._serialize_config(conf_str, serializer) == expected
+
+
+# ===================== async network error with default tests =====================
+@pytest.mark.asyncio
+async def test_async_mock_network_error_exception(async_config, mocker):
+    mocker.patch.object(
+        ConfigAsyncEndpoint, "_get", side_effect=httpx.TimeoutException("")
+    )
+    assert await async_config.get("test_config_1", "DEFAULT_GROUP") is None
+    mocker.patch.object(
+        ConfigAsyncEndpoint, "_get", side_effect=httpx.ConnectError("")
+    )
+    assert await async_config.get("test_config_1", "DEFAULT_GROUP") is None
+
+
+@pytest.mark.asyncio
+async def test_async_mock_network_error_with_default(async_config, mocker):
+    """Test that default value is returned on network error with cache miss."""
+    mocker.patch.object(
+        ConfigAsyncEndpoint, "_get", side_effect=httpx.TimeoutException("")
+    )
+    # No cache, should return default
+    assert (
+        await async_config.get(
+            "test_config_no_cache", "DEFAULT_GROUP", default="fallback_value"
+        )
+        == "fallback_value"
+    )
+    mocker.patch.object(
+        ConfigAsyncEndpoint, "_get", side_effect=httpx.ConnectError("")
+    )
+    assert (
+        await async_config.get(
+            "test_config_no_cache2", "DEFAULT_GROUP", default="fallback_value"
+        )
+        == "fallback_value"
+    )

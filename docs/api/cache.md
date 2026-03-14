@@ -10,6 +10,36 @@ use-nacos 提供了灵活的缓存机制，用于缓存 Nacos 配置和服务实
 - **MemoryCache** - 内存缓存（默认）
 - **FileCache** - 文件缓存（持久化）
 
+## 缓存降级行为
+
+当获取配置时，如果 Nacos 服务不可用（网络错误、超时等），系统会自动降级到缓存：
+
+| 场景 | 行为 |
+|------|------|
+| 服务正常 | 从服务获取，更新缓存 |
+| 服务异常 + 缓存命中 | 返回缓存值 |
+| 服务异常 + 缓存未命中 + 有 default | 返回 default 值 |
+| 服务异常 + 缓存未命中 + 无 default | 返回 `None` |
+| 配置不存在 (404) + 有 default | 返回 default 值 |
+| 配置不存在 (404) + 无 default | 抛出 `HTTPResponseError` |
+
+### 使用 default 参数
+
+```python
+from use_nacos import NacosClient
+
+client = NacosClient("http://localhost:8848")
+
+# 网络错误或配置不存在时，返回默认值
+config = client.config.get(
+    "app.yaml",
+    "DEFAULT_GROUP",
+    default="name: default-app\nversion: 1.0.0"
+)
+```
+
+**注意**：`default` 参数同时覆盖 404 和网络错误+缓存未命中的场景。
+
 ## BaseCache
 
 抽象基类，定义了缓存的基本接口。

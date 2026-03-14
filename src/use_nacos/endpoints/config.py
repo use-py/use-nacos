@@ -286,10 +286,14 @@ class ConfigOperationMixin:
             serializer: Serializer to parse the content. True for auto-detection,
                 or provide a Serializer instance.
             cache: Cache instance for fallback. Defaults to global memory_cache.
-            default: Default value if configuration not found (404).
+            default: Default value if configuration not found (404) or network
+                error with cache miss.
 
         Returns:
             Configuration content (raw string or serialized based on serializer).
+            Returns default value (or None if not provided) when:
+            - Configuration not found (404)
+            - Network error and cache miss
 
         Raises:
             HTTPResponseError: If configuration not found and no default provided.
@@ -316,7 +320,10 @@ class ConfigOperationMixin:
                 tenant,
                 exc,
             )
-            return _serialize_config(cache.get(config_key), serializer)
+            cached = cache.get(config_key)
+            if cached is None and default is not None:
+                return default
+            return _serialize_config(cached, serializer)
         except HTTPResponseError as exc:
             logger.debug(
                 "Failed to get config from server. " "data_id=%s, group=%s, status=%d",
@@ -456,10 +463,14 @@ class ConfigAsyncOperationMixin:
             serializer: Serializer to parse the content. True for auto-detection,
                 or provide a Serializer instance.
             cache: Cache instance for fallback. Defaults to global memory_cache.
-            default: Default value if configuration not found (404).
+            default: Default value if configuration not found (404) or network
+                error with cache miss.
 
         Returns:
             Configuration content (raw string or serialized based on serializer).
+            Returns default value (or None if not provided) when:
+            - Configuration not found (404)
+            - Network error and cache miss
 
         Raises:
             HTTPResponseError: If configuration not found and no default provided.
@@ -486,7 +497,10 @@ class ConfigAsyncOperationMixin:
                 tenant,
                 exc,
             )
-            return _serialize_config(cache.get(config_key), serializer)
+            cached = cache.get(config_key)
+            if cached is None and default is not None:
+                return default
+            return _serialize_config(cached, serializer)
         except HTTPResponseError as exc:
             logger.debug(
                 "Failed to get config from server. " "data_id=%s, group=%s, status=%d",

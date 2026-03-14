@@ -33,6 +33,13 @@ client.config.publish("test_config", "DEFAULT_GROUP", "test_value")
 # get config
 assert client.config.get("test_config", "DEFAULT_GROUP") == "test_value"
 
+# get config with default (recommended for production)
+config = client.config.get(
+    "app.yaml", 
+    "DEFAULT_GROUP",
+    default="name: myapp\nversion: 1.0.0"
+)
+
 
 # subscribe config
 
