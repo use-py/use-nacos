@@ -259,7 +259,10 @@ class NacosClient(BaseClient):
         Raises:
             HTTPResponseError: If the server returns an error response.
         """
-        request = self._build_request(method, path, query, body, headers, **kwargs)
+        timeout = kwargs.pop("timeout", None)
+        request = self._build_request(
+            method, path, query, body, headers, timeout=timeout, **kwargs
+        )
         try:
             response = self.client.send(
                 request, auth=NacosAPIAuth(self.username, self.password)
@@ -360,7 +363,10 @@ class NacosAsyncClient(BaseClient):
         Raises:
             HTTPResponseError: If the server returns an error response.
         """
-        request = self._build_request(method, path, query, body, headers, **kwargs)
+        timeout = kwargs.pop("timeout", None)
+        request = self._build_request(
+            method, path, query, body, headers, timeout=timeout, **kwargs
+        )
         try:
             response = await self.client.send(
                 request, auth=NacosAPIAuth(self.username, self.password)
@@ -400,9 +406,8 @@ class NacosAPIAuth(Auth):
             username: Username for Nacos authentication.
             password: Password for Nacos authentication.
         """
-        self.auth_params: Dict[str, Optional[str]] = {
-            "username": username,
-            "password": password,
+        self.auth_params: Dict[str, str] = {
+            k: v for k, v in (("username", username), ("password", password)) if v
         }
 
     def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
@@ -414,7 +419,8 @@ class NacosAPIAuth(Auth):
         Yields:
             The modified request with auth parameters.
         """
-        request.url = request.url.copy_merge_params(  # type: ignore[arg-type]
-            params=self.auth_params
-        )
+        if self.auth_params:
+            request.url = request.url.copy_merge_params(  # type: ignore[arg-type]
+                params=self.auth_params
+            )
         yield request
