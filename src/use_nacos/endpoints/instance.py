@@ -10,7 +10,7 @@ import logging
 import threading
 import time
 from functools import partial
-from typing import TYPE_CHECKING, Any, List, Literal, Optional, TypedDict
+from typing import Any, List, Literal, Optional, TypedDict
 
 import httpx
 
@@ -18,9 +18,6 @@ from .._chooser import Chooser
 from ..exception import EmptyHealthyInstanceError
 from ..typings import BeatType, SyncAsync
 from .endpoint import Endpoint
-
-if TYPE_CHECKING:
-    from ..client import BaseClient
 
 _ConsistencyType = Literal["ephemeral", "persist"]
 
@@ -292,7 +289,9 @@ class InstanceAsyncOperationMixin:
         if not any([instance, service_name]):
             raise ValueError("Either `instance` or `service_name` should be provided")
         if not instance:
-            instance = await self.get_one_healthy(service_name)  # type: ignore[assignment,misc]
+            instance = await self.get_one_healthy(  # type: ignore[assignment,misc]
+                service_name
+            )
         url = f"http://{instance['ip']}:{instance['port']}{path}"  # noqa
         client = await self._get_client(instance)
         return await client.request(method=method, url=url, *args, **kwargs)

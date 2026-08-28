@@ -14,8 +14,6 @@ def memory_cache():
 
 @pytest.fixture
 def file_cache(tmp_path):
-    import os
-
     return FileCache(file_path=tmp_path)
 
 

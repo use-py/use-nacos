@@ -8,7 +8,7 @@ import asyncio
 import hashlib
 import logging
 import threading
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import httpx
 
@@ -22,9 +22,6 @@ from ..exception import HTTPResponseError
 from ..serializer import AutoSerializer, Serializer
 from ..typings import SyncAsync
 from .endpoint import Endpoint
-
-if TYPE_CHECKING:
-    from ..client import BaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -468,7 +465,9 @@ class ConfigAsyncOperationMixin:
             >>> # Get raw content
             >>> content = await client.config.get("app.yaml", "DEFAULT_GROUP")
             >>> # Get as dict (auto-detect format)
-            >>> config = await client.config.get("app.yaml", "DEFAULT_GROUP", serializer=True)
+            >>> config = await client.config.get(
+            ...     "app.yaml", "DEFAULT_GROUP", serializer=True
+            ... )
         """
         cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)

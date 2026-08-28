@@ -8,7 +8,7 @@ import logging
 import os
 from abc import abstractmethod
 from json import JSONDecodeError
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import Any, Dict, Generator, List, Optional
 
 import httpx
 from httpx import AsyncHTTPTransport, Auth, HTTPTransport, Request, Response
@@ -269,6 +269,18 @@ class NacosClient(BaseClient):
         except httpx.HTTPStatusError as exc:
             raise HTTPResponseError(exc.response)
 
+    def close(self) -> None:
+        """Close the underlying httpx client and release connections."""
+        self.client.close()
+
+    def __enter__(self) -> "NacosClient":
+        """Enter the runtime context for ``with`` usage."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the runtime context and close the client."""
+        self.close()
+
 
 class NacosAsyncClient(BaseClient):
     """Asynchronous Nacos client.
@@ -358,6 +370,18 @@ class NacosAsyncClient(BaseClient):
         except httpx.HTTPStatusError as exc:
             raise HTTPResponseError(exc.response)
 
+    async def close(self) -> None:
+        """Close the underlying httpx async client and release connections."""
+        await self.client.aclose()
+
+    async def __aenter__(self) -> "NacosAsyncClient":
+        """Enter the async runtime context for ``async with`` usage."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the async runtime context and close the client."""
+        await self.close()
+
 
 class NacosAPIAuth(Auth):
     """HTTP authentication for Nacos API.
@@ -390,5 +414,7 @@ class NacosAPIAuth(Auth):
         Yields:
             The modified request with auth parameters.
         """
-        request.url = request.url.copy_merge_params(params=self.auth_params)  # type: ignore[arg-type]
+        request.url = request.url.copy_merge_params(  # type: ignore[arg-type]
+            params=self.auth_params
+        )
         yield request
