@@ -8,7 +8,7 @@ import logging
 import os
 from abc import abstractmethod
 from json import JSONDecodeError
-from typing import Any, Dict, Generator, List, Optional, Union
+from typing import Any, Dict, Generator, List, Optional
 
 import httpx
 from httpx import AsyncHTTPTransport, Auth, HTTPTransport, Request, Response
@@ -259,7 +259,10 @@ class NacosClient(BaseClient):
         Raises:
             HTTPResponseError: If the server returns an error response.
         """
-        request = self._build_request(method, path, query, body, headers, **kwargs)
+        timeout = kwargs.pop("timeout", None)
+        request = self._build_request(
+            method, path, query, body, headers, timeout=timeout, **kwargs
+        )
         try:
             response = self.client.send(
                 request, auth=NacosAPIAuth(self.username, self.password)
@@ -268,6 +271,18 @@ class NacosClient(BaseClient):
             return self._parse_response(response, serialized)  # type: ignore[arg-type]
         except httpx.HTTPStatusError as exc:
             raise HTTPResponseError(exc.response)
+
+    def close(self) -> None:
+        """Close the underlying httpx client and release connections."""
+        self.client.close()
+
+    def __enter__(self) -> "NacosClient":
+        """Enter the runtime context for ``with`` usage."""
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the runtime context and close the client."""
+        self.close()
 
 
 class NacosAsyncClient(BaseClient):
@@ -348,7 +363,10 @@ class NacosAsyncClient(BaseClient):
         Raises:
             HTTPResponseError: If the server returns an error response.
         """
-        request = self._build_request(method, path, query, body, headers, **kwargs)
+        timeout = kwargs.pop("timeout", None)
+        request = self._build_request(
+            method, path, query, body, headers, timeout=timeout, **kwargs
+        )
         try:
             response = await self.client.send(
                 request, auth=NacosAPIAuth(self.username, self.password)
@@ -357,6 +375,18 @@ class NacosAsyncClient(BaseClient):
             return self._parse_response(response, serialized)  # type: ignore[arg-type]
         except httpx.HTTPStatusError as exc:
             raise HTTPResponseError(exc.response)
+
+    async def close(self) -> None:
+        """Close the underlying httpx async client and release connections."""
+        await self.client.aclose()
+
+    async def __aenter__(self) -> "NacosAsyncClient":
+        """Enter the async runtime context for ``async with`` usage."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the async runtime context and close the client."""
+        await self.close()
 
 
 class NacosAPIAuth(Auth):
@@ -376,9 +406,8 @@ class NacosAPIAuth(Auth):
             username: Username for Nacos authentication.
             password: Password for Nacos authentication.
         """
-        self.auth_params: Dict[str, Optional[str]] = {
-            "username": username,
-            "password": password,
+        self.auth_params: Dict[str, str] = {
+            k: v for k, v in (("username", username), ("password", password)) if v
         }
 
     def auth_flow(self, request: Request) -> Generator[Request, Response, None]:
@@ -390,5 +419,8 @@ class NacosAPIAuth(Auth):
         Yields:
             The modified request with auth parameters.
         """
-        request.url = request.url.copy_merge_params(params=self.auth_params)  # type: ignore[arg-type]
+        if self.auth_params:
+            request.url = request.url.copy_merge_params(  # type: ignore[arg-type]
+                params=self.auth_params
+            )
         yield request

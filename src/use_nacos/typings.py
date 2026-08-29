@@ -29,7 +29,7 @@ class BeatType(TypedDict):
     service_name: str
     ip: str
     port: int
-    weight: int
+    weight: float
     ephemeral: bool
     cluster: Optional[str]
     metadata: Optional[Union[dict, str]]

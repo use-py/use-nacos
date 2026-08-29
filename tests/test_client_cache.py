@@ -32,8 +32,6 @@ def test_client_caching(instance):
     """Test that httpx.Client instances are cached."""
     # Create a mock client that tracks creation
     client_creation_count = 0
-    original_client_init = None
-    created_clients = []
 
     def mock_client_init(*args, **kwargs):
         nonlocal client_creation_count
@@ -63,7 +61,6 @@ def test_client_caching(instance):
 async def test_async_client_caching(async_instance):
     """Test that httpx.AsyncClient instances are cached."""
     client_creation_count = 0
-    created_clients = {}
 
     def mock_client_class(*args, **kwargs):
         nonlocal client_creation_count
