@@ -8,23 +8,19 @@ import asyncio
 import hashlib
 import logging
 import threading
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 import httpx
 
 from ..cache import (
     DEFAULT_CACHE_TTL,
     BaseCache,
-    MemoryCache,
     memory_cache,
 )
 from ..exception import HTTPResponseError
 from ..serializer import AutoSerializer, Serializer
 from ..typings import SyncAsync
 from .endpoint import Endpoint
-
-if TYPE_CHECKING:
-    from ..client import BaseClient
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +205,7 @@ class _BaseConfigEndpoint(Endpoint):
         group: str,
         content_md5: Optional[str] = None,
         tenant: Optional[str] = "",
-        timeout: Optional[int] = 30_000,
+        timeout: int = 30_000,
     ) -> SyncAsync[Any]:
         """Long-polling for configuration changes.
 
@@ -235,23 +231,13 @@ class _BaseConfigEndpoint(Endpoint):
             headers={
                 "Long-Pulling-Timeout": f"{timeout}",
             },
-            timeout=timeout,
+            timeout=timeout / 1_000,
         )
 
 
 class ConfigOperationMixin:
     """Mixin for synchronous configuration operations."""
 
-    # Simple client cache for instance requests
-    _client_cache: dict = {}
-
-    def __getattr__(self, attr: str) -> SyncAsync[Any]:
-        """Allow dynamic attribute access for service-based requests."""
-        from functools import partial
-
-        return partial(self.request, service_name=attr)
-
-    @staticmethod
     def _config_callback(
         callback: Optional[Callable], config: Any, serializer: Any
     ) -> None:
@@ -349,7 +335,7 @@ class ConfigOperationMixin:
             tenant: Namespace/tenant ID.
             timeout: Long-polling timeout in milliseconds. Defaults to 30000.
             serializer: Serializer for the configuration content.
-            cache: Cache instance. Defaults to new MemoryCache.
+            cache: Cache instance. Defaults to global memory_cache.
             callback: Callback function invoked on configuration change.
 
         Returns:
@@ -364,7 +350,7 @@ class ConfigOperationMixin:
             >>> # Later, to stop:
             >>> stop_event.cancel()
         """
-        cache = cache or MemoryCache()
+        cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
         last_md5 = _get_md5(cache.get(config_key) or "")
         stop_event = threading.Event()
@@ -407,15 +393,6 @@ class ConfigOperationMixin:
 
 class ConfigAsyncOperationMixin:
     """Mixin for asynchronous configuration operations."""
-
-    # Simple client cache for instance requests
-    _client_cache: dict = {}
-
-    def __getattr__(self, attr: str) -> SyncAsync[Any]:
-        """Allow dynamic attribute access for service-based requests."""
-        from functools import partial
-
-        return partial(self.request, service_name=attr)
 
     @staticmethod
     async def _config_callback(
@@ -468,7 +445,9 @@ class ConfigAsyncOperationMixin:
             >>> # Get raw content
             >>> content = await client.config.get("app.yaml", "DEFAULT_GROUP")
             >>> # Get as dict (auto-detect format)
-            >>> config = await client.config.get("app.yaml", "DEFAULT_GROUP", serializer=True)
+            >>> config = await client.config.get(
+            ...     "app.yaml", "DEFAULT_GROUP", serializer=True
+            ... )
         """
         cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
@@ -519,7 +498,7 @@ class ConfigAsyncOperationMixin:
             tenant: Namespace/tenant ID.
             timeout: Long-polling timeout in milliseconds. Defaults to 30000.
             serializer: Serializer for the configuration content.
-            cache: Cache instance. Defaults to new MemoryCache.
+            cache: Cache instance. Defaults to global memory_cache.
             callback: Callback function invoked on configuration change
                 (sync or async).
 
@@ -535,7 +514,7 @@ class ConfigAsyncOperationMixin:
             >>> # Later, to stop:
             >>> stop_event.cancel()
         """
-        cache = cache or MemoryCache()
+        cache = cache or memory_cache
         config_key = _get_config_key(data_id, group, tenant)
         last_md5 = _get_md5(cache.get(config_key) or "")
         stop_event = asyncio.Event()

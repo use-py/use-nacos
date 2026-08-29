@@ -4,7 +4,7 @@ import json
 import os
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 
 class BaseCache:

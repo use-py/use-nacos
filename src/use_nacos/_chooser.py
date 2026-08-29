@@ -4,6 +4,7 @@ This module implements a weighted random selection algorithm for
 choosing among multiple service instances based on their weights.
 """
 
+import math
 import random
 from typing import Any, List, Tuple
 
@@ -40,31 +41,29 @@ class Chooser:
         Raises:
             ValueError: If the cumulative weights don't sum to 1.
         """
-        origin_weight_sum = 0.0
-        # Preparing the valid items list and calculating the original weights sum
+        # Normalize special weights and drop non-positive ones.
+        normalized: List[Tuple[Any, float]] = []
         for item, weight in self.host_with_weight:
+            if not isinstance(weight, (int, float)) or math.isnan(weight):
+                weight = 1.0
+            elif math.isinf(weight):
+                weight = 10000.0
             if weight <= 0:
                 continue
-            if float("inf") == weight:
-                weight = 10000.0
-            elif float("nan") == weight:
-                weight = 1.0
-            origin_weight_sum += weight
-            self.items.append(item)
+            normalized.append((item, float(weight)))
 
+        self.items = [item for item, _ in normalized]
         if not self.items:
+            self.weights = []
             return
 
-        # Computing the exact weights for each item
-        exact_weights = []
-        for _, weight in self.host_with_weight:
-            if weight > 0:
-                exact_weights.append(weight / origin_weight_sum)
+        origin_weight_sum = sum(weight for _, weight in normalized)
 
-        # Initializing the cumulative weights array
+        # Computing the exact cumulative weights for each item.
         random_range = 0.0
-        for single_weight in exact_weights:
-            random_range = random_range + single_weight
+        self.weights = []
+        for _, weight in normalized:
+            random_range += weight / origin_weight_sum
             self.weights.append(random_range)
 
         # Checking the final weight
