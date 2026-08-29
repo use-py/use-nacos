@@ -21,6 +21,7 @@ jobs:
         python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
     runs-on: ${{ matrix.os }}
     environment: test
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Set up uv
@@ -42,7 +43,3 @@ jobs:
         run: uv sync --group test
       - name: Run tests
         run: uv run pytest tests/
-        env:
-          NACOS_SERVER_ADDR: ${{ secrets.NACOS_SERVER_ADDR }}
-          NACOS_USERNAME: ${{ secrets.NACOS_USERNAME }}
-          NACOS_PASSWORD: ${{ secrets.NACOS_PASSWORD }}
