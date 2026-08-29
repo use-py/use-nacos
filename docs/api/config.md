@@ -127,6 +127,56 @@ async def add_config_watcher(
     """
 ```
 
+## 长轮询订阅
+
+`subscribe` 启动一个长轮询（long-polling）后台任务，在配置变更时通过回调通知调用方。
+
+```python
+def subscribe(
+    self,
+    data_id: str,
+    group: str = "DEFAULT_GROUP",
+    tenant: str = "",
+    *,
+    timeout: int = 30_000,
+    serializer: Optional[Union[Serializer, bool]] = None,
+    cache: Optional[BaseCache] = None,
+    callback: Optional[Callable] = None,
+) -> threading.Event:
+    """
+    启动长轮询订阅任务
+
+    参数:
+        data_id: 配置 ID
+        group: 配置分组，默认为 DEFAULT_GROUP
+        tenant: 命名空间 ID
+        timeout: 长轮询超时，单位为 **毫秒**，默认 30000ms。
+                内部会转换为秒作为 httpx 请求超时。
+        serializer: 序列化器，True 表示自动检测格式
+        cache: 缓存实例，默认为全局内存缓存（与 get 共享）
+        callback: 配置变更回调
+
+    返回:
+        threading.Event（异步版为 asyncio.Event），调用 .cancel() 停止订阅
+    """
+```
+
+### 缓存共享
+
+`get()` 和 `subscribe()` 默认使用同一个全局 `memory_cache`：通过 `get` 写入的缓存会被 `subscribe` 复用，反之亦然。如需隔离，请显式传入自定义 `cache` 实例。
+
+### 停止订阅
+
+```python
+stop_event = client.config.subscribe(
+    "app.yaml", "DEFAULT_GROUP", callback=on_change
+)
+# ...
+stop_event.cancel()
+```
+
+异步版返回 `asyncio.Event`，用法一致。
+
 ## 使用示例
 
 ```python

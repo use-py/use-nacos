@@ -75,6 +75,22 @@ nacos.instance.heartbeat(
 )
 ```
 
+### context manager (auto close)
+
+`NacosClient` / `NacosAsyncClient` both implement the context-manager protocol — the underlying httpx client is closed automatically on exit.
+
+```python
+from use_nacos import NacosClient, NacosAsyncClient
+
+# sync
+with NacosClient("http://localhost:8848") as client:
+    config = client.config.get("app.yaml", "DEFAULT_GROUP")
+
+# async
+async with NacosAsyncClient("http://localhost:8848") as client:
+    config = await client.config.get("app.yaml", "DEFAULT_GROUP")
+```
+
 ### 😘support `async` mode
 
 ```python

@@ -59,6 +59,45 @@ client_with_tls = NacosClient(
 )
 ```
 
+## 上下文管理器
+
+`NacosClient` / `NacosAsyncClient` 都实现了上下文管理器协议，可以在 `with` / `async with` 语句中使用，离开时自动关闭底层 httpx 客户端并释放连接。
+
+```python
+from use_nacos import NacosClient, NacosAsyncClient
+
+# 同步
+with NacosClient("http://localhost:8848") as client:
+    config = client.config.get("app.yaml", "DEFAULT_GROUP")
+
+# 异步
+async with NacosAsyncClient("http://localhost:8848") as client:
+    config = await client.config.get("app.yaml", "DEFAULT_GROUP")
+```
+
+如需手动释放资源，调用 `close()`（异步版本为 `aclose()`）：
+
+```python
+client = NacosClient("http://localhost:8848")
+try:
+    ...
+finally:
+    client.close()
+```
+
+## 认证行为
+
+只有当 **同时** 提供 `username` 和 `password` 时，客户端才会把凭据注入到请求 URL（query 参数 `username` / `password`，与 Nacos OpenAPI 行为一致）；仅传其中一个或都不传则不会注入 `username` / `password` 参数，避免在访问日志中泄露空凭据。凭据目前仍以 query 形式传递，HTTP 层面未做加密，生产环境建议搭配 HTTPS（`tls_enabled=True`）使用。
+
+```python
+# ✅ 注入 username=nacos&password=nacos
+NacosClient("http://localhost:8848", username="nacos", password="nacos")
+
+# ⚠️ 不注入任何凭据（不会留下空 username/password 参数）
+NacosClient("http://localhost:8848")
+NacosClient("http://localhost:8848", username="nacos")  # 缺 password
+```
+
 ## 错误处理
 
 客户端操作可能抛出以下异常：

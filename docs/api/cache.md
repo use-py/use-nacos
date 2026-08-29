@@ -190,7 +190,7 @@ memory_cache.set("config", {"timeout": 30})
 config = memory_cache.get("config")
 ```
 
-这个实例通常在内部使用，用于缓存配置和服务实例信息。
+这个实例通常在内部使用，用于缓存配置和服务实例信息。`config.get()` 与 `config.subscribe()` 默认都使用这个全局实例，因此两边写入的缓存会互相复用。
 
 ---
 
@@ -201,7 +201,7 @@ config = memory_cache.get("config")
 | 最高性能 | MemoryCache | 无 I/O 开销 |
 | 数据持久化 | FileCache | 保存到文件 |
 | 多进程共享 | FileCache | 进程间共享文件 |
-| 默认使用 | MemoryCache (全局) | 预配置，即用即开 |
+| 默认使用 | MemoryCache (全局) | 预配置，即用即开；`get()` 和 `subscribe()` 共享同一实例 |
 
 ---
 
