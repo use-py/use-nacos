@@ -246,9 +246,7 @@ async def test_async_mock_network_error_exception(async_config, mocker):
         ConfigAsyncEndpoint, "_get", side_effect=httpx.TimeoutException("")
     )
     assert await async_config.get("test_config_1", "DEFAULT_GROUP") is None
-    mocker.patch.object(
-        ConfigAsyncEndpoint, "_get", side_effect=httpx.ConnectError("")
-    )
+    mocker.patch.object(ConfigAsyncEndpoint, "_get", side_effect=httpx.ConnectError(""))
     assert await async_config.get("test_config_1", "DEFAULT_GROUP") is None
 
 
@@ -265,9 +263,7 @@ async def test_async_mock_network_error_with_default(async_config, mocker):
         )
         == "fallback_value"
     )
-    mocker.patch.object(
-        ConfigAsyncEndpoint, "_get", side_effect=httpx.ConnectError("")
-    )
+    mocker.patch.object(ConfigAsyncEndpoint, "_get", side_effect=httpx.ConnectError(""))
     assert (
         await async_config.get(
             "test_config_no_cache2", "DEFAULT_GROUP", default="fallback_value"
