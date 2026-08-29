@@ -688,7 +688,7 @@ class _BaseInstanceEndpoint(Endpoint):
             "serviceName": serverName,
             "ip": ip,
             "port": port,
-            "weight": weight,  # type: ignore[typeddict-item]
+            "weight": weight,
             "ephemeral": ephemeral,  # type: ignore[typeddict-item]
             **kwargs,  # type: ignore[typeddict-item]
         }
